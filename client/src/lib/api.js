@@ -25,6 +25,12 @@ export function createProvider(payload) {
   return request('/providers', { method: 'POST', body: JSON.stringify(payload) });
 }
 
+// The signed-in account's own listings — server derives "mine" from the
+// session, not from anything the client tracks itself.
+export function fetchMyProviders() {
+  return request('/providers/mine');
+}
+
 export function fetchProviderRequests(providerId) {
   return request(`/providers/${providerId}/requests`);
 }
@@ -33,13 +39,13 @@ export function createRequest(payload) {
   return request('/requests', { method: 'POST', body: JSON.stringify(payload) });
 }
 
-export function fetchMyRequests(requesterName) {
-  return request(`/requests?requesterName=${encodeURIComponent(requesterName)}`);
+export function fetchMyRequests() {
+  return request('/requests/mine');
 }
 
-export function updateRequestStatus(requestId, status, providerId) {
+export function updateRequestStatus(requestId, status) {
   return request(`/requests/${requestId}`, {
     method: 'PATCH',
-    body: JSON.stringify({ status, providerId }),
+    body: JSON.stringify({ status }),
   });
 }

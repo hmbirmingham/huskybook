@@ -1,24 +1,19 @@
 import { useState } from 'react';
 import { createRequest } from '../lib/api.js';
-import { getStoredName, setStoredName } from '../lib/identity.js';
+import { useAuth } from '../lib/AuthContext.jsx';
 
 export default function RequestModal({ provider, onClose, onSubmitted }) {
-  const [requesterName, setRequesterName] = useState(getStoredName());
+  const { user } = useAuth();
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!requesterName.trim()) {
-      setError('Enter your name so the provider knows who asked.');
-      return;
-    }
     setSubmitting(true);
     setError('');
     try {
-      setStoredName(requesterName);
-      await createRequest({ providerId: provider.id, requesterName: requesterName.trim(), note: note.trim() || null });
+      await createRequest({ providerId: provider.id, note: note.trim() || null });
       onSubmitted();
     } catch (err) {
       setError(err.message);
@@ -49,20 +44,11 @@ export default function RequestModal({ provider, onClose, onSubmitted }) {
 
         <p className="mt-2 text-sm text-ink-soft">
           {provider.name}'s exact location and contact info stay private until they accept.
+          They'll see this request as{' '}
+          <span className="font-semibold">{user.displayName}</span>.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm font-medium text-ink">
-            Your name
-            <input
-              type="text"
-              value={requesterName}
-              onChange={(e) => setRequesterName(e.target.value)}
-              placeholder="e.g. Chris P."
-              className="border-2 border-ink/40 bg-paper px-3 py-2 text-base text-ink focus:border-navy focus:outline-none"
-            />
-          </label>
-
           <label className="flex flex-col gap-1 text-sm font-medium text-ink">
             Note (optional)
             <textarea

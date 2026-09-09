@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../lib/AuthContext.jsx';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Find a Service', end: true },
@@ -8,9 +9,17 @@ const NAV_ITEMS = [
 ];
 
 export default function Header() {
+  const { user, loading, logout } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    await logout();
+    navigate('/');
+  }
+
   return (
     <header className="border-b-2 border-ink bg-paper">
-      <div className="mx-auto flex max-w-5xl flex-col gap-4 px-5 py-5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mx-auto flex max-w-5xl flex-col gap-2 px-5 pt-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="font-display text-3xl font-semibold tracking-tight text-navy">
             HuskyBook<span className="text-amber">.</span>
@@ -19,6 +28,26 @@ export default function Header() {
             Student-run hair, nails, makeup &amp; braids — posted by whoever's around.
           </p>
         </div>
+
+        {!loading && (
+          <div className="text-sm">
+            {user ? (
+              <span className="flex items-center gap-2 text-ink-soft">
+                Signed in as <span className="font-semibold text-ink">{user.displayName || user.email}</span>
+                <button type="button" onClick={handleLogout} className="font-semibold text-navy underline">
+                  Sign out
+                </button>
+              </span>
+            ) : (
+              <NavLink to="/login" className="font-semibold text-navy underline">
+                Sign in
+              </NavLink>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="mx-auto max-w-5xl px-5 pb-5">
         <nav className="flex flex-wrap gap-2">
           {NAV_ITEMS.map((item) => (
             <NavLink
