@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchProviders } from '../lib/api.js';
 import { CATEGORIES, TYPES } from '../lib/constants.js';
 import ProviderCard from '../components/ProviderCard.jsx';
 import RequestModal from '../components/RequestModal.jsx';
 import { usePageTitle } from '../lib/usePageTitle.js';
+import { useAuth } from '../lib/AuthContext.jsx';
 
 export default function FindACut() {
   usePageTitle('Find a Service');
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -31,6 +35,14 @@ export default function FindACut() {
       cancelled = true;
     };
   }, [filters.category, filters.type, filters.availableOnly]);
+
+  function handleRequest(provider) {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setRequesting(provider);
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-8">
@@ -92,7 +104,7 @@ export default function FindACut() {
 
       <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {providers.map((provider) => (
-          <ProviderCard key={provider.id} provider={provider} onRequest={setRequesting} />
+          <ProviderCard key={provider.id} provider={provider} onRequest={handleRequest} />
         ))}
       </div>
 
