@@ -97,3 +97,33 @@ Partway through this phase, the brief changed: instead of hair cuts specifically
 
 ## Phase 5 — Design pass (`feature/design-pass`)
 
+**What I'm building:** the polish pass — favicon, tab titles, a mobile check, and whatever rough edges turn up along the way. Most of the actual visual design decisions were already made and logged in Phase 2, since building each view against the theme from the start meant there wasn't a large separate "restyle everything" step left here.
+
+**Checked, no changes needed — mobile layout.** Resized the browser to a 375px-wide viewport and walked through all four views plus the request modal. Everything held up without a single mobile-specific class: nav wraps into a 2x2 grid, provider cards go full-width, the modal doesn't overflow. That's a direct result of using flexbox/grid with `gap` and `flex-wrap` everywhere from Phase 2 onward instead of fixed widths — worth noting as a case where doing the layout right the first time meant there was nothing left to fix here.
+
+**Added — a real favicon.** `client/public/favicon.svg`: navy rounded square, a cream serif "H," and an amber dot in the same spot as the provider cards' "pin." Small, but a generic default-Vite tab icon is exactly the kind of unfinished-looking detail that undercuts everything else in the design direction.
+
+**Added — per-view tab titles.** `usePageTitle`, a five-line effect hook, instead of the static title from `index.html` for every route. Didn't reach for a routing-aware title library for four fixed strings.
+
+**Bug hit — a stale local reference to a deleted listing.** While testing, hit a real edge case in the no-auth identity model documented back in Phase 1: I'd reseeded the database mid-session (wiping and recreating all providers with fresh ids) without clearing the browser's `localStorage`, which still remembered an old listing id. Manage Requests hit that id, got a 404, and surfaced the raw server error string `"Provider not found"` with no way to recover short of clearing site data by hand. Fixed properly rather than dismissing it as a testing artifact, since the identical thing happens for any real user if a listing is ever deleted: added a `notFound` state with a "Forget this listing" action (`identity.js`'s new `removeMyListing`) that clears the dead reference and falls back to the normal empty state. This is the sort of gap that's easy to miss when testing only against a database that never changes out from under the browser — worth remembering for any project with client-cached ids and no server-side session to invalidate them.
+
+---
+
+## What's next
+
+**Fully built:** the four flows from the spec, end to end, against a real (if small) SQLite backend. Browse/filter, request, list yourself, accept/decline, and the specific privacy rule the whole app is organized around — exact location and contact info never leave the server for a listing until the requester's specific request is accepted — enforced at the query/serializer layer, not bolted on in the UI. All of it manually tested through the running app, not just reviewed by reading the code.
+
+**Stubbed or deliberately deferred:**
+
+- **Real authentication.** The single biggest gap. Every other limitation below is downstream of this one. `client/src/lib/identity.js` and the `verified` column on `providers` exist specifically so that wiring in UConn NetID / `@uconn.edu` verification later is a contained change (that one file, plus a new server-side auth middleware) instead of a rewrite. Until then: anyone can read anyone's requests by typing their name, and anyone can hit the manage-requests endpoint for any provider id they can guess.
+- **Notifications.** A provider currently only finds out about a request by opening Manage Requests. No email, push, or even a polling badge count. Straightforward to add once there's a real identity to notify.
+- **Pagination on the directory.** Fine at seed-data scale (a handful of providers); would need it before any real traffic.
+- **Rate limiting / abuse prevention.** Nothing stops someone from spamming requests at a provider, or listing dozens of fake providers. Not attempted here — this is a local dev demo, not a deployed service, and real abuse prevention is tied up with real identity anyway.
+- **Editing or deleting a listing/request.** Once posted, a listing or request is permanent from the UI's perspective (the schema doesn't even have a `DELETE` route). Small addition, just not in the original scope.
+- **Tests.** No automated test suite — everything in this log was verified by hand against the running app. For a project this size that was a reasonable tradeoff of time against the four-flow scope, but it's the first thing I'd add before letting this grow further; the privacy-gating logic in `server/src/routes/requests.js` in particular deserves real regression coverage rather than "I checked it by hand once."
+
+**What I'd do differently with more time:**
+
+- Build the real-auth seam *before* the four flows instead of alongside them. It would have been roughly the same amount of code, and every place that currently reads a name from `localStorage` or trusts a `providerId` from the request body would instead read from a verified session from day one — better than retrofitting it later.
+- Write the SQL privacy-gating logic (the `CASE WHEN status = 'accepted'` pattern in `requests.js`) as a small set of automated tests immediately after Phase 1, rather than relying on repeated manual curl/browser checks through every later phase. It held up every time, but that's a fragile guarantee for a rule this central to the app.
+- Decide the category taxonomy (`hair | nails | makeup | braids | other`) with more research into what UConn students actually offer, rather than picking a reasonable-looking list. `other` doing a lot of quiet work in the current enum is a sign it's probably incomplete.

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createProvider } from '../lib/api.js';
 import { CATEGORIES, TYPES } from '../lib/constants.js';
 import { getStoredName, setStoredName, addMyListing } from '../lib/identity.js';
+import { usePageTitle } from '../lib/usePageTitle.js';
 
 const inputClasses =
   'border-2 border-ink/40 bg-[#fbf5e6] px-3 py-2 text-base text-ink focus:border-navy focus:outline-none';
@@ -21,6 +22,7 @@ const initialForm = {
 };
 
 export default function ListYourself() {
+  usePageTitle('List Yourself');
   const [form, setForm] = useState(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');

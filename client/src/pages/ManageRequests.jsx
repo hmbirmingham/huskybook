@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchProviderRequests, updateRequestStatus } from '../lib/api.js';
-import { getMyListings } from '../lib/identity.js';
+import { getMyListings, removeMyListing } from '../lib/identity.js';
+import { usePageTitle } from '../lib/usePageTitle.js';
 import Badge from '../components/Badge.jsx';
 
 const STATUS_TONE = { pending: 'amber', accepted: 'pine', declined: 'outline' };
 
 export default function ManageRequests() {
-  const [listings] = useState(getMyListings());
+  usePageTitle('Manage Requests');
+  const [listings, setListings] = useState(getMyListings());
   const [activeListingId, setActiveListingId] = useState(listings[0]?.id ?? null);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notFound, setNotFound] = useState(false);
   const [actionError, setActionError] = useState('');
 
   useEffect(() => {
@@ -22,10 +25,30 @@ export default function ManageRequests() {
   function load() {
     setLoading(true);
     setError('');
+    setNotFound(false);
     fetchProviderRequests(activeListingId)
       .then(setRequests)
-      .catch((err) => setError(err.message))
+      .catch((err) => {
+        // A remembered listing id can outlive the row it points to — most
+        // likely during local dev after a database reset, but the same
+        // thing would happen for real if a listing were ever deleted
+        // server-side. Since there's no auth to notice this server-side,
+        // the browser needs its own way to forget a dead reference.
+        if (err.message === 'Provider not found') {
+          setNotFound(true);
+        } else {
+          setError(err.message);
+        }
+      })
       .finally(() => setLoading(false));
+  }
+
+  function forgetListing() {
+    const remaining = removeMyListing(activeListingId);
+    setListings(remaining);
+    setRequests([]);
+    setNotFound(false);
+    setActiveListingId(remaining[0]?.id ?? null);
   }
 
   async function respond(requestId, status) {
@@ -78,7 +101,20 @@ export default function ManageRequests() {
       {error && <p className="mt-6 font-medium text-rust">{error}</p>}
       {actionError && <p className="mt-4 font-medium text-rust">{actionError}</p>}
 
-      {!loading && !error && requests.length === 0 && (
+      {notFound && (
+        <div className="mt-6 border-2 border-rust bg-rust/10 px-4 py-3 text-sm text-rust">
+          <p>This listing no longer exists on the server — it may have been removed.</p>
+          <button
+            type="button"
+            onClick={forgetListing}
+            className="mt-2 font-semibold underline"
+          >
+            Forget this listing
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && !notFound && requests.length === 0 && (
         <p className="mt-6 text-ink-soft">No requests yet.</p>
       )}
 
