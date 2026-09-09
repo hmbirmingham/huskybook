@@ -1,8 +1,8 @@
 {
-  "name": "campus-cuts",
+  "name": "huskybook",
   "private": true,
   "version": "0.1.0",
-  "description": "Peer-to-peer directory connecting UConn students who cut hair with students looking for a cut.",
+  "description": "Peer-to-peer directory connecting UConn students who offer personal-care services (hair, nails, makeup, braids) with students looking to book one.",
   "workspaces": [
     "client",
     "server"
