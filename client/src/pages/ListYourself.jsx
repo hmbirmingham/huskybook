@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createProvider } from '../lib/api.js';
 import { CATEGORIES, TYPES } from '../lib/constants.js';
-import { getStoredName, setStoredName, addMyProviderId } from '../lib/identity.js';
+import { getStoredName, setStoredName, addMyListing } from '../lib/identity.js';
 
 const inputClasses =
   'border-2 border-ink/40 bg-[#fbf5e6] px-3 py-2 text-base text-ink focus:border-navy focus:outline-none';
@@ -45,7 +45,7 @@ export default function ListYourself() {
         .filter(Boolean);
       const created = await createProvider({ ...form, specialties });
       setStoredName(form.name);
-      addMyProviderId(created.id);
+      addMyListing({ id: created.id, name: created.name });
       setListing(created);
     } catch (err) {
       setError(err.message);
