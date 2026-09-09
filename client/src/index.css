@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  /* Warm paper + ink, not a generic AI cream/terracotta pairing — see
+     BUILD_LOG "design pass" for the full reasoning. */
+  --color-paper: #f2ead7;
+  --color-paper-dark: #e6dabd;
+  --color-ink: #26201a;
+  --color-ink-soft: #55493d;
+  --color-navy: #142850;
+  --color-navy-dark: #0c1a35;
+  --color-amber: #c8791e;
+  --color-amber-dark: #9c5c12;
+  --color-pine: #2f4d3a;
+  --color-pine-dark: #203528;
+  --color-rust: #a3401f;
+
+  --font-display: "Zilla Slab", "Georgia", serif;
+  --font-body: "Inter", "Helvetica Neue", sans-serif;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(38, 32, 26, 0.05) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Flat, hard-edged "pinned flyer" shadow instead of a soft blurred SaaS
+   drop-shadow — no blur radius, a fixed offset, low opacity. */
+.shadow-pin {
+  box-shadow: 4px 4px 0 rgba(20, 40, 80, 0.14);
+}
+
+.shadow-pin-sm {
+  box-shadow: 3px 3px 0 rgba(20, 40, 80, 0.12);
+}
