@@ -39,7 +39,8 @@ npm run seed
 | price_range | text | free-form, e.g. "$15-25" |
 | contact_method | text | private, same disclosure rule as `exact_location` |
 | available | integer (0/1) | provider-controlled toggle |
-| verified | integer (0/1) | reserved for a future manual/NetID verification pass — unused for now, see BUILD_LOG |
+| verified | integer (0/1) | a separate, higher trust bar than just having a signed-in account (e.g. a manual review pass) — unused for now, see BUILD_LOG |
+| owner_user_id | integer, fk → users.id | who actually owns this listing — checked server-side, not client-supplied |
 | created_at | text | ISO timestamp |
 
 **requests**
@@ -48,19 +49,30 @@ npm run seed
 |---|---|---|
 | id | integer, pk | |
 | provider_id | integer, fk → providers.id | |
-| requester_name | text | plain name, no auth yet — see "Identity" below |
+| requester_name | text | the requester's account display name at the time of the request |
+| requester_user_id | integer, fk → users.id | who actually sent it — this, not requester_name, is what's checked |
 | note | text | optional |
 | status | text | `pending` \| `accepted` \| `declined` |
 | created_at | text | ISO timestamp |
 
-## Identity — read this before assuming it's secure
+**users**
 
-There is no real authentication in this build. "Who you are" is just a name you type in, kept in the browser's `localStorage` (see `client/src/lib/identity.js`). It's enough to demo the request/accept flow end to end, but it means:
+| column | type | notes |
+|---|---|---|
+| id | integer, pk | |
+| email | text, unique | must end in `@uconn.edu` |
+| display_name | text | set once, right after first sign-in — what other people see you as |
+| created_at | text | ISO timestamp |
 
-- Nothing stops someone from typing a different name and reading requests sent to a name that isn't theirs.
-- Nothing stops someone from guessing another provider's `provider_id` and hitting the manage-requests endpoint for a listing that isn't theirs.
+**login_tokens** / **sessions** — back the magic-link sign-in flow (single-use hashed tokens, and the session a signed-in browser holds as a cookie). See BUILD_LOG Phase 6 for the reasoning; not something the rest of the app touches directly.
 
-Swapping in real identity (UConn NetID / `@uconn.edu` email verification) means replacing `client/src/lib/identity.js` and adding an auth middleware in `server/src/middleware/` that resolves a verified identity from a session/token instead of a request body field — the rest of the app reads identity through that one module, not by threading a name around, specifically so this swap doesn't ripple through every route and component. See "What's next" in BUILD_LOG.md for the full list of what real auth would need to lock down.
+## Identity
+
+Sign-in is passwordless: enter an `@uconn.edu` email, get a one-time link. There's no real email provider wired up yet, so in development the API also hands the link straight back in the response (`devLoginUrl`) and the server logs it — see `server/src/lib/mailer.js`, the one function a real provider (Resend, Postmark, SMTP) would replace. **That dev-response shortcut must never ship to a real deployment** — it exists purely so this can be tested without an inbox.
+
+Ownership is enforced server-side against the session, not against anything the client sends: creating a listing sets `owner_user_id` from `req.user`, and both accepting/declining a request and viewing a listing's incoming requests check that column against the signed-in account (`server/src/routes/providers.js`, `server/src/routes/requests.js`). A provider or request id you can guess isn't enough to act on it.
+
+What's still not here: no email verification beyond "you clicked the link" (no re-confirmation, no account recovery flow), no rate limiting beyond the one-link-per-minute cooldown on requesting a new sign-in link, and no admin/moderation tooling. See "What's next" in BUILD_LOG.md.
 
 ## A word on liability
 
