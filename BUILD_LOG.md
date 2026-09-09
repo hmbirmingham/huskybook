@@ -69,3 +69,15 @@ Partway through this phase, the brief changed: instead of hair cuts specifically
 
 ## Phase 3 — Provider listing (`feature/provider-listing`)
 
+**What I'm building:** the "list yourself" form — the other side of the marketplace from Phase 2's browse/request flow.
+
+**Decision — comma-separated text for specialties, not a tag picker.** Category has a fixed enum because it drives the browse filter (Phase 1's reasoning). Specialties don't filter anything — they're just descriptive text on a card — so there's no controlled vocabulary to enforce and a tag-picker UI would be more component for no functional gain. A single text input split on commas gets the same result (an array, stored the same way) with a fraction of the code.
+
+**Decision — the confirmation screen deliberately echoes the private fields back.** Every other view in this app is built around *not* showing `exactLocation`/`contactMethod` to anyone but the listing's own owner post-acceptance. The one exception is immediately after someone submits their own listing — showing their own room number back to them isn't a leak, it's confirming the form saved what they think it saved. Worth calling out explicitly here since it looks, at a glance, like it might contradict the privacy rule everywhere else; it doesn't, because the only "requester" of this data is the provider themselves, and the API route it comes from (`POST /api/providers`) already returns the owner view by design (Phase 1).
+
+**Bug watch, confirmed clean:** the obvious way this could break is a newly-created listing leaking its own exact location onto the public directory it immediately appears on. Manually created a listing, then loaded Find a Service in the same session and confirmed the card showed only the public fields — the confirmation screen and the directory card are reading from two different API responses (`POST` owner view vs. `GET` public view), so there's no shared object that could accidentally carry the private fields onto the public page.
+
+---
+
+## Phase 4 — My Requests & Manage Requests (`feature/manage-requests`)
+
