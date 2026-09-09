@@ -81,3 +81,19 @@ Partway through this phase, the brief changed: instead of hair cuts specifically
 
 ## Phase 4 — My Requests & Manage Requests (`feature/manage-requests`)
 
+**What I'm building:** the two views that close the loop — a requester checking on what they've sent, and a provider acting on what's come in. This is also where the location-unlock rule becomes visible in the UI for the first time, rather than just correct in an API response.
+
+**Decision — "who am I" via a typed name, not an automatic session.** My Requests asks for the name you requested under rather than silently trusting whatever's in `localStorage`. Slightly more friction than auto-filling and going, but it means the page still works correctly if someone requested services under two different names in the same browser, or if a housemate uses the same laptop — the page shows exactly the name you tell it to, not "whichever name happened to be saved last." This is a small stand-in for what real auth will make unnecessary (see README's Identity section), not a permanent design.
+
+**Decision — reload from the server after accept/decline instead of updating local state optimistically.** `ManageRequests` calls `PATCH`, then re-fetches the full list rather than flipping the one row's status in place. Slightly more network traffic, but the server is the only source of truth for status, and if a `PATCH` ever fails partway (network blip, a stale providerId) the UI reflects what actually happened instead of what was requested to happen.
+
+**Decision — the listing picker only appears with more than one listing.** `getMyListings()` supports multiple listings per browser (someone could plausibly offer more than one kind of service), but rendering a one-item dropdown for the common case just adds a control with no real choice in it. The picker only renders when `listings.length > 1`.
+
+**Bug hit, environment-specific:** while testing this phase's UI by driving a real browser, coordinate-based clicks and typed text kept silently landing on the wrong element or not registering at all. Root cause: the browser preview pane was hidden (not fronted) for most of this session, and it turns out this particular tool doesn't fully render/composite a hidden page, so pixel-coordinate input isn't reliable against it — screenshots looked stale and clicks landed tens or hundreds of pixels off from where they should have. Worked around it by switching to ref-based `form_input` for filling fields (resolves the actual DOM node, not a pixel guess) and `element.click()` / `form.requestSubmit()` via direct JS execution for buttons, both of which don't depend on the pane being visually rendered. Not a bug in the app — flagging it here because it's the kind of thing worth knowing before trusting a screenshot-driven test against a tool like this: if interactions stop landing correctly, check whether the thing you're testing is actually on screen before assuming the app broke.
+
+**Manual test, full loop:** listed a new provider through the real form, created a request against it, confirmed it showed up in Manage Requests as pending, accepted it, confirmed the status updated immediately, then loaded My Requests under the requester's name and confirmed the exact location and contact method were now visible — the same rule verified with curl in Phase 1, now verified through the actual UI a person would use.
+
+---
+
+## Phase 5 — Design pass (`feature/design-pass`)
+
