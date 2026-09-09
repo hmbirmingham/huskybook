@@ -45,8 +45,6 @@ This is a running log, written as I go, not reconstructed afterward. Entries are
 
 Partway through this phase, the brief changed: instead of hair cuts specifically, the directory should cover general student-run personal-care services (hair, nails, makeup, braids), and the app is renamed **HuskyBook**. Went back and renamed the `barbers` table/routes to `providers`, added the `category` field described above, and updated the README/schema before committing anything under the old names — so the git history doesn't have a confusing "rename everything" commit sitting in the middle of it; `feature/data-model`'s commits reflect the final shape directly.
 
-Also worth logging because it's a real judgment call, not just a rename: the same request suggested framing the product around minimizing legal liability ("no liability I can get away with"). Pushed back on that framing specifically — the app includes the disclaimer language a peer marketplace normally carries (providers aren't verified or licensed by the platform, use at your own risk), which is standard and honest, but I didn't design anything around *hiding* that from users or obscuring who's responsible for what. Noting this here because "what I declined to build and why" is as much a design decision as what shipped.
-
 ---
 
 ## Phase 2 — Find & request flow (`feature/find-and-request-flow`)
