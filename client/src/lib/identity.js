@@ -7,7 +7,7 @@
 // of localStorage.
 
 const NAME_KEY = 'huskybook.identity.name';
-const MY_PROVIDER_IDS_KEY = 'huskybook.identity.myProviderIds';
+const MY_LISTINGS_KEY = 'huskybook.identity.myListings';
 
 export function getStoredName() {
   return window.localStorage.getItem(NAME_KEY) || '';
@@ -17,18 +17,22 @@ export function setStoredName(name) {
   window.localStorage.setItem(NAME_KEY, name.trim());
 }
 
-export function getMyProviderIds() {
+// Stored as {id, name} pairs, not bare ids, so Manage Requests can show
+// "Marcus T." in a picker instead of "Listing #1" — the name is free
+// (List Yourself already knows it at creation time) and saves a round
+// trip to the server just to label a dropdown.
+export function getMyListings() {
   try {
-    const raw = window.localStorage.getItem(MY_PROVIDER_IDS_KEY);
+    const raw = window.localStorage.getItem(MY_LISTINGS_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-export function addMyProviderId(id) {
-  const ids = getMyProviderIds();
-  if (!ids.includes(id)) {
-    window.localStorage.setItem(MY_PROVIDER_IDS_KEY, JSON.stringify([...ids, id]));
+export function addMyListing({ id, name }) {
+  const listings = getMyListings();
+  if (!listings.some((l) => l.id === id)) {
+    window.localStorage.setItem(MY_LISTINGS_KEY, JSON.stringify([...listings, { id, name }]));
   }
 }
