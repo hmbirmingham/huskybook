@@ -1,15 +1,16 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
 import { toPublicProvider, toOwnerProvider } from '../lib/serialize.js';
+import { requireAuth } from '../middleware/auth.js';
 
 export const providersRouter = Router();
 
 const CATEGORIES = ['hair', 'nails', 'makeup', 'braids', 'other'];
 const TYPES = ['dorm', 'mobile'];
 
-// Browse the directory. Deliberately public-fields-only — this is the one
-// endpoint anyone can hit with no name/identity at all, so it's the one
-// that must never carry exact_location or contact_method.
+// Browse the directory. Deliberately public-fields-only, and deliberately
+// open to anyone signed in or not — this is the one endpoint that must
+// never carry exact_location or contact_method.
 providersRouter.get('/', (req, res) => {
   const { category, type, available } = req.query;
 
@@ -40,12 +41,22 @@ providersRouter.get('/', (req, res) => {
   res.json(rows.map(toPublicProvider));
 });
 
-// "List yourself" — create a provider listing. Returns the owner view
-// (including the private fields) since the person who just submitted this
-// form obviously already knows their own room number and contact info.
-// The client is expected to hang on to this id locally (see
-// client/src/lib/identity.js) since there's no login to recover it later.
-providersRouter.post('/', (req, res) => {
+// The signed-in user's own listings — owner view, since these are all
+// listings they themselves created. This replaces the old localStorage
+// bookkeeping in the client (client/src/lib/identity.js) with the actual
+// source of truth: whichever rows this account owns in the database.
+providersRouter.get('/mine', requireAuth, (req, res) => {
+  const rows = db
+    .prepare('SELECT * FROM providers WHERE owner_user_id = ? ORDER BY created_at DESC')
+    .all(req.user.id);
+  res.json(rows.map(toOwnerProvider));
+});
+
+// "List yourself" — create a provider listing, owned by the signed-in
+// account. Returns the owner view (including the private fields) since the
+// person who just submitted this form obviously already knows their own
+// room number and contact info.
+providersRouter.post('/', requireAuth, (req, res) => {
   const {
     name,
     category,
@@ -73,8 +84,8 @@ providersRouter.post('/', (req, res) => {
   const result = db
     .prepare(
       `INSERT INTO providers
-        (name, category, type, building_zone, exact_location, specialties, price_range, contact_method, available)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        (name, category, type, building_zone, exact_location, specialties, price_range, contact_method, available, owner_user_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       name,
@@ -85,20 +96,25 @@ providersRouter.post('/', (req, res) => {
       JSON.stringify(specialties),
       priceRange,
       contactMethod,
-      available ? 1 : 0
+      available ? 1 : 0,
+      req.user.id
     );
 
   const row = db.prepare('SELECT * FROM providers WHERE id = ?').get(result.lastInsertRowid);
   res.status(201).json(toOwnerProvider(row));
 });
 
-// Incoming requests for one provider's listing. There's no auth to check
-// that the caller actually owns this provider_id — see README's Identity
-// section and BUILD_LOG for why that's a known, deliberate gap for now.
-providersRouter.get('/:id/requests', (req, res) => {
+// Incoming requests for one provider's listing — now actually checks that
+// the caller owns it, closing the gap flagged since Phase 1: this used to
+// be provider_id in, matching data out, with nothing verifying the two
+// were the same account.
+providersRouter.get('/:id/requests', requireAuth, (req, res) => {
   const provider = db.prepare('SELECT * FROM providers WHERE id = ?').get(req.params.id);
   if (!provider) {
     return res.status(404).json({ error: 'Provider not found' });
+  }
+  if (provider.owner_user_id !== req.user.id) {
+    return res.status(403).json({ error: 'You do not own this listing' });
   }
 
   const rows = db

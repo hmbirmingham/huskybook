@@ -1,6 +1,12 @@
 // Wipes and repopulates the two tables with sample data so the app has
 // something to look at on first run. Safe to re-run any time — it's a
 // reset, not a migration.
+//
+// Seeded providers are intentionally unclaimed (owner_user_id stays NULL,
+// since no real account created them) — they're there to make the
+// directory look populated, not to be managed. Sign in and list yourself
+// fresh to test the provider-side flows (Manage Requests, etc.) against a
+// listing you actually own.
 import { db } from './db/index.js';
 
 db.exec('DELETE FROM requests');
