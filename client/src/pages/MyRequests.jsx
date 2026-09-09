@@ -3,10 +3,12 @@ import { fetchMyRequests } from '../lib/api.js';
 import { categoryLabel } from '../lib/constants.js';
 import Badge from '../components/Badge.jsx';
 import { getStoredName, setStoredName } from '../lib/identity.js';
+import { usePageTitle } from '../lib/usePageTitle.js';
 
 const STATUS_TONE = { pending: 'amber', accepted: 'pine', declined: 'outline' };
 
 export default function MyRequests() {
+  usePageTitle('My Requests');
   const [name, setName] = useState(getStoredName());
   const [nameInput, setNameInput] = useState(getStoredName());
   const [requests, setRequests] = useState([]);

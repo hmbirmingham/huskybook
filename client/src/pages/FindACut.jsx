@@ -3,8 +3,10 @@ import { fetchProviders } from '../lib/api.js';
 import { CATEGORIES, TYPES } from '../lib/constants.js';
 import ProviderCard from '../components/ProviderCard.jsx';
 import RequestModal from '../components/RequestModal.jsx';
+import { usePageTitle } from '../lib/usePageTitle.js';
 
 export default function FindACut() {
+  usePageTitle('Find a Service');
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
