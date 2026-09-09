@@ -36,3 +36,13 @@ export function addMyListing({ id, name }) {
     window.localStorage.setItem(MY_LISTINGS_KEY, JSON.stringify([...listings, { id, name }]));
   }
 }
+
+// Needed for the case where a remembered listing id no longer resolves on
+// the server (deleted, or a database reset during local development) —
+// without this there'd be no way for the browser to forget a dead
+// reference short of clearing all site data.
+export function removeMyListing(id) {
+  const remaining = getMyListings().filter((l) => l.id !== id);
+  window.localStorage.setItem(MY_LISTINGS_KEY, JSON.stringify(remaining));
+  return remaining;
+}
