@@ -8,14 +8,14 @@ Full write-up of how this was built, and the reasoning behind the decisions belo
 
 ## Setup
 
-Requires Node 22.5+ (the server uses Node's built-in `node:sqlite` module — see BUILD_LOG for why).
+Requires Node 18+.
 
 ```bash
 npm install
 npm run dev
 ```
 
-This starts the Express API on `http://localhost:3001` and the Vite dev server on `http://localhost:5173`, and creates a local SQLite database at `server/data/huskybook.sqlite` on first run (schema is created automatically; no separate migration step).
+This starts the Express API on `http://localhost:3001` and the Vite dev server on `http://localhost:5173`, and creates a local SQLite database at `server/data/huskybook.sqlite` on first run (schema is created automatically; no separate migration step). The database is a real SQLite file via [libSQL](https://github.com/tursodatabase/libsql) — no external account needed for local dev. In production, the same client instead points at a hosted [Turso](https://turso.tech) database (see Deployment below) so data survives a redeploy on a host with no persistent disk of its own.
 
 To load/reset to the sample data at any point:
 
@@ -25,17 +25,18 @@ npm run seed
 
 ## Deployment
 
-Deployed as a single Railway service: `npm run build` builds the client (`vite build` → `client/dist`), `npm run start` runs `node server/src/index.js`, which in production also serves `client/dist` itself and falls back to `index.html` for client-side routes (see the `IS_PRODUCTION` block in `server/src/index.js`). One process, one URL — no separate static host to configure.
+Target host is [Render](https://render.com) (free tier, no card required for a web service) rather than Railway — Railway isn't a free option for this project. `railway.toml` is still in the repo and still works if that ever changes, but it isn't the maintained path; Render-specific config lands in a later BUILD_LOG phase.
 
-**Environment variables** — see `.env.example` for the full list with descriptions. Set these in Railway's dashboard, not in a committed file:
+Either way, the app builds and runs the same: `npm run build` builds the client (`vite build` → `client/dist`), `npm run start` runs `node server/src/index.js`, which in production also serves `client/dist` itself and falls back to `index.html` for client-side routes (see the `IS_PRODUCTION` block in `server/src/index.js`). One process, one URL — no separate static host to configure.
+
+**Environment variables** — see `.env.example` for the full list with descriptions. Set these in your host's dashboard, not in a committed file:
 
 - `NODE_ENV=production`
 - `RESEND_API_KEY` — from [resend.com](https://resend.com); without it, magic-link emails fail to send in production (the app itself still boots and serves the directory fine — see BUILD_LOG Sprint 1 for why that failure is isolated rather than crashing the whole process)
 - `BASE_URL` — the deployed app's own public URL, no trailing slash. Used to build the link inside the sign-in email, so it has to match wherever this is actually reachable.
+- `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` — from [turso.tech](https://turso.tech) (free, no card required). **Required for data to survive a redeploy.** Without these the app silently falls back to a local file, which most free hosts (Render's free tier included) don't persist across deploys — see BUILD_LOG for the full reasoning behind this over a Railway volume.
 
-**Database persistence** — `server/data/` holds the SQLite file, and a plain Railway deploy's filesystem doesn't survive a redeploy. Mount a [Railway volume](https://docs.railway.com/reference/volumes) at `/app/server/data` (or wherever the service's working directory places it) before going live, or every redeploy silently resets to an empty database.
-
-**Health check** — `GET /api/health` returns `{"ok": true}`; `railway.toml` points Railway's healthcheck at this path.
+**Health check** — `GET /api/health` returns `{"ok": true}`.
 
 ## Data model
 
@@ -82,7 +83,7 @@ Deployed as a single Railway service: `npm run build` builds the client (`vite b
 
 ## Identity
 
-Sign-in is passwordless: enter an `@uconn.edu` email, get a one-time link. There's no real email provider wired up yet, so in development the API also hands the link straight back in the response (`devLoginUrl`) and the server logs it — see `server/src/lib/mailer.js`, the one function a real provider (Resend, Postmark, SMTP) would replace. **That dev-response shortcut must never ship to a real deployment** — it exists purely so this can be tested without an inbox.
+Sign-in is passwordless: enter an `@uconn.edu` email, get a one-time link. Real delivery goes through [Resend](https://resend.com) in production; in development, no email provider is used at all — the API hands the link straight back in the response (`devLoginUrl`) and the server logs it, so this can be tested without a real inbox. See `server/src/lib/mailer.js`. **That dev-response shortcut must never ship to a real deployment** — it's gated on `NODE_ENV`, not a flag someone could leave on by accident.
 
 Ownership is enforced server-side against the session, not against anything the client sends: creating a listing sets `owner_user_id` from `req.user`, and both accepting/declining a request and viewing a listing's incoming requests check that column against the signed-in account (`server/src/routes/providers.js`, `server/src/routes/requests.js`). A provider or request id you can guess isn't enough to act on it.
 
