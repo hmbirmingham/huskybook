@@ -15,12 +15,19 @@ function parseCookies(header = '') {
 }
 
 // Runs on every request and attaches req.user (or null) — cheap enough that
-// routes never have to remember to opt in before reading it.
-export function attachUser(req, res, next) {
-  const cookies = parseCookies(req.headers.cookie);
-  req.sessionId = cookies[SESSION_COOKIE] || null;
-  req.user = getUserBySession(req.sessionId);
-  next();
+// routes never have to remember to opt in before reading it. Wrapped in its
+// own try/catch (rather than the shared asyncHandler) since this isn't a
+// route — Express 4 won't forward a rejected promise from middleware to
+// next() automatically either.
+export async function attachUser(req, res, next) {
+  try {
+    const cookies = parseCookies(req.headers.cookie);
+    req.sessionId = cookies[SESSION_COOKIE] || null;
+    req.user = await getUserBySession(req.sessionId);
+    next();
+  } catch (err) {
+    next(err);
+  }
 }
 
 export function requireAuth(req, res, next) {

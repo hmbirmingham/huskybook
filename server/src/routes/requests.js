@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { sendRequestNotification, sendRequestStatusUpdate } from '../lib/mailer.js';
+import { asyncHandler } from '../lib/asyncHandler.js';
 
 // Email delivery never blocks or fails a request/response cycle — a flaky
 // mail provider shouldn't be able to break the actual feature (submitting
@@ -27,8 +28,12 @@ const REQUEST_WITH_PROVIDER_SQL = `
   JOIN providers ON providers.id = requests.provider_id
 `;
 
-function fetchRequestForRequester(id) {
-  return db.prepare(`${REQUEST_WITH_PROVIDER_SQL} WHERE requests.id = ?`).get(id);
+async function fetchRequestForRequester(id) {
+  const result = await db.execute({
+    sql: `${REQUEST_WITH_PROVIDER_SQL} WHERE requests.id = ?`,
+    args: [id],
+  });
+  return result.rows[0];
 }
 
 // Submit a request to a provider. Starts pending; the provider has to
@@ -36,43 +41,46 @@ function fetchRequestForRequester(id) {
 // requester's identity comes entirely from the session now — requesterName
 // is the account's display_name, not a value the client gets to supply,
 // which closes the old "type any name" gap.
-requestsRouter.post('/', requireAuth, (req, res) => {
-  const { providerId, note = null } = req.body;
+requestsRouter.post(
+  '/',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { providerId, note = null } = req.body;
 
-  if (!req.user.display_name) {
-    return res.status(400).json({ error: 'Set a display name before requesting a service' });
-  }
-  if (!providerId) {
-    return res.status(400).json({ error: 'providerId is required' });
-  }
+    if (!req.user.display_name) {
+      return res.status(400).json({ error: 'Set a display name before requesting a service' });
+    }
+    if (!providerId) {
+      return res.status(400).json({ error: 'providerId is required' });
+    }
 
-  const provider = db
-    .prepare(
-      `SELECT providers.name, users.email AS owner_email
-       FROM providers
-       LEFT JOIN users ON users.id = providers.owner_user_id
-       WHERE providers.id = ?`
-    )
-    .get(providerId);
-  if (!provider) {
-    return res.status(404).json({ error: 'Provider not found' });
-  }
+    const providerResult = await db.execute({
+      sql: `SELECT providers.name, users.email AS owner_email
+            FROM providers
+            LEFT JOIN users ON users.id = providers.owner_user_id
+            WHERE providers.id = ?`,
+      args: [providerId],
+    });
+    const provider = providerResult.rows[0];
+    if (!provider) {
+      return res.status(404).json({ error: 'Provider not found' });
+    }
 
-  const result = db
-    .prepare(
-      'INSERT INTO requests (provider_id, requester_name, requester_user_id, note) VALUES (?, ?, ?, ?)'
-    )
-    .run(providerId, req.user.display_name, req.user.id, note);
+    const result = await db.execute({
+      sql: 'INSERT INTO requests (provider_id, requester_name, requester_user_id, note) VALUES (?, ?, ?, ?)',
+      args: [providerId, req.user.display_name, req.user.id, note],
+    });
 
-  const row = fetchRequestForRequester(result.lastInsertRowid);
-  res.status(201).json(serializeForRequester(row));
+    const row = await fetchRequestForRequester(Number(result.lastInsertRowid));
+    res.status(201).json(serializeForRequester(row));
 
-  // Seed/demo listings have no owner_user_id (see seed.js) and so no email
-  // to notify — nothing to send in that case, not an error.
-  if (provider.owner_email) {
-    notify(sendRequestNotification(provider.owner_email, req.user.display_name, provider.name));
-  }
-});
+    // Seed/demo listings have no owner_user_id (see seed.js) and so no email
+    // to notify — nothing to send in that case, not an error.
+    if (provider.owner_email) {
+      notify(sendRequestNotification(provider.owner_email, req.user.display_name, provider.name));
+    }
+  })
+);
 
 // The signed-in user's own sent requests. Filtered by requester_user_id,
 // not by a name string a client could supply for anyone — this used to be
@@ -81,54 +89,77 @@ requestsRouter.post('/', requireAuth, (req, res) => {
 // (exact_location, contact_method) are ever sent to a requester, and only
 // for requests that are specifically `accepted` — that filtering happens
 // in the SQL below, not as an afterthought in the response shape.
-requestsRouter.get('/mine', requireAuth, (req, res) => {
-  const rows = db
-    .prepare(`${REQUEST_WITH_PROVIDER_SQL} WHERE requests.requester_user_id = ? ORDER BY requests.created_at DESC`)
-    .all(req.user.id);
+requestsRouter.get(
+  '/mine',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const result = await db.execute({
+      sql: `${REQUEST_WITH_PROVIDER_SQL} WHERE requests.requester_user_id = ? ORDER BY requests.created_at DESC`,
+      args: [req.user.id],
+    });
 
-  res.json(rows.map(serializeForRequester));
-});
+    res.json(result.rows.map(serializeForRequester));
+  })
+);
 
 // Accept or decline. This is the moment the location unlocks — it's a side
 // effect of the status flip, not a separate action, so there's no window
 // where a request is "accepted" but the location hasn't caught up.
 // Ownership is now checked against the session, not a client-supplied
 // providerId — the old version trusted whatever id the client sent along.
-requestsRouter.patch('/:id', requireAuth, (req, res) => {
-  const { status } = req.body;
+requestsRouter.patch(
+  '/:id',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { status } = req.body;
 
-  if (!['accepted', 'declined'].includes(status)) {
-    return res.status(400).json({ error: 'status must be "accepted" or "declined"' });
-  }
+    if (!['accepted', 'declined'].includes(status)) {
+      return res.status(400).json({ error: 'status must be "accepted" or "declined"' });
+    }
 
-  const existing = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
-  if (!existing) {
-    return res.status(404).json({ error: 'Request not found' });
-  }
+    const existingResult = await db.execute({
+      sql: 'SELECT * FROM requests WHERE id = ?',
+      args: [req.params.id],
+    });
+    const existing = existingResult.rows[0];
+    if (!existing) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
 
-  const provider = db.prepare('SELECT name, owner_user_id FROM providers WHERE id = ?').get(existing.provider_id);
-  if (!provider || provider.owner_user_id !== req.user.id) {
-    return res.status(403).json({ error: 'You do not own the listing this request was sent to' });
-  }
+    const providerResult = await db.execute({
+      sql: 'SELECT name, owner_user_id FROM providers WHERE id = ?',
+      args: [existing.provider_id],
+    });
+    const provider = providerResult.rows[0];
+    if (!provider || provider.owner_user_id !== req.user.id) {
+      return res.status(403).json({ error: 'You do not own the listing this request was sent to' });
+    }
 
-  db.prepare('UPDATE requests SET status = ? WHERE id = ?').run(status, req.params.id);
-  const updated = db.prepare('SELECT * FROM requests WHERE id = ?').get(req.params.id);
-  res.json({
-    id: updated.id,
-    providerId: updated.provider_id,
-    requesterName: updated.requester_name,
-    note: updated.note,
-    status: updated.status,
-    createdAt: updated.created_at,
-  });
+    await db.execute({ sql: 'UPDATE requests SET status = ? WHERE id = ?', args: [status, req.params.id] });
+    const updatedResult = await db.execute({ sql: 'SELECT * FROM requests WHERE id = ?', args: [req.params.id] });
+    const updated = updatedResult.rows[0];
+    res.json({
+      id: updated.id,
+      providerId: updated.provider_id,
+      requesterName: updated.requester_name,
+      note: updated.note,
+      status: updated.status,
+      createdAt: updated.created_at,
+    });
 
-  const requester = updated.requester_user_id
-    ? db.prepare('SELECT email FROM users WHERE id = ?').get(updated.requester_user_id)
-    : null;
-  if (requester) {
-    notify(sendRequestStatusUpdate(requester.email, status, provider.name));
-  }
-});
+    let requesterEmail = null;
+    if (updated.requester_user_id) {
+      const requesterResult = await db.execute({
+        sql: 'SELECT email FROM users WHERE id = ?',
+        args: [updated.requester_user_id],
+      });
+      requesterEmail = requesterResult.rows[0]?.email ?? null;
+    }
+    if (requesterEmail) {
+      notify(sendRequestStatusUpdate(requesterEmail, status, provider.name));
+    }
+  })
+);
 
 function serializeForRequester(row) {
   return {
