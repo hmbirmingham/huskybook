@@ -1,7 +1,12 @@
 import { Resend } from 'resend';
 
 const IS_DEV = process.env.NODE_ENV !== 'production';
-const FROM_ADDRESS = 'HuskyBook <noreply@huskybook.app>';
+// huskybook.hmbirmingham.me, not the bare hmbirmingham.me — a subdomain
+// gets its own DKIM/SPF records in Resend, so this app's transactional
+// sending (a stream of magic links to strangers' @uconn.edu addresses)
+// never touches whatever reputation/DNS setup the portfolio root domain
+// already has.
+const FROM_ADDRESS = 'HuskyBook <noreply@huskybook.hmbirmingham.me>';
 
 // Constructed lazily, on first real send, rather than at module load. The
 // Resend constructor throws synchronously if RESEND_API_KEY is missing —
