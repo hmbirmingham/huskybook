@@ -23,6 +23,20 @@ To load/reset to the sample data at any point:
 npm run seed
 ```
 
+## Deployment
+
+Deployed as a single Railway service: `npm run build` builds the client (`vite build` → `client/dist`), `npm run start` runs `node server/src/index.js`, which in production also serves `client/dist` itself and falls back to `index.html` for client-side routes (see the `IS_PRODUCTION` block in `server/src/index.js`). One process, one URL — no separate static host to configure.
+
+**Environment variables** — see `.env.example` for the full list with descriptions. Set these in Railway's dashboard, not in a committed file:
+
+- `NODE_ENV=production`
+- `RESEND_API_KEY` — from [resend.com](https://resend.com); without it, magic-link emails fail to send in production (the app itself still boots and serves the directory fine — see BUILD_LOG Sprint 1 for why that failure is isolated rather than crashing the whole process)
+- `BASE_URL` — the deployed app's own public URL, no trailing slash. Used to build the link inside the sign-in email, so it has to match wherever this is actually reachable.
+
+**Database persistence** — `server/data/` holds the SQLite file, and a plain Railway deploy's filesystem doesn't survive a redeploy. Mount a [Railway volume](https://docs.railway.com/reference/volumes) at `/app/server/data` (or wherever the service's working directory places it) before going live, or every redeploy silently resets to an empty database.
+
+**Health check** — `GET /api/health` returns `{"ok": true}`; `railway.toml` points Railway's healthcheck at this path.
+
 ## Data model
 
 **providers**
