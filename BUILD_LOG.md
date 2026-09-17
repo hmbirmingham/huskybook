@@ -189,11 +189,27 @@ A sprint plan arrived from the user partway through this build (2026-09-16), tar
 
 ---
 
+## Phase 11 — Render deployment config (`feat/render-deploy`)
+
+**What I'm building:** the actual host-specific deploy config, now that the database layer no longer assumes a local disk (Phase 10).
+
+**Fly.io ruled out by direct observation, not just research.** Before landing on Render, the user tried launching this repo through Fly.io's own "Launch an App from GitHub" dashboard flow directly — machine size `shared-cpu-1x`/256MB, region defaulted to Amsterdam — and hit a wall requiring a credit card before it would deploy anything, even at that tiny size. That's the same conclusion the web research in Phase 10 reached, now confirmed against the real current UI rather than secondhand pricing pages. (Also flagged in passing: Amsterdam would've been a poor region choice for a UConn-facing app regardless — Fly's `ewr`/Newark or `bos`/Boston would be far closer to Storrs.)
+
+**`render.yaml` (a Render "Blueprint")** defines the service declaratively: `runtime: node`, `plan: free`, `region: virginia` (closest US region Render offers to Connecticut), the existing `build`/`start` scripts, and `healthCheckPath: /api/health` (the same endpoint from Phase 1 — still hasn't needed to change). Verified the exact field names (`runtime` vs. an older `env` key, `sync: false` for secrets, valid `region` values) against Render's current Blueprint spec docs rather than guessing from memory, since getting this wrong would mean a confusing failure on first deploy attempt rather than a local test failure I could catch myself.
+
+**Every real secret is `sync: false`** — `RESEND_API_KEY`, `BASE_URL`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`. Render prompts for each of these once, in its own dashboard, the first time the Blueprint is applied; none of them ever have a value in this file. Only `NODE_ENV=production` is set directly, since it isn't a secret.
+
+**Honest limitation:** this config has been checked against Render's documented Blueprint spec and the app's own build/start scripts have been verified locally (repeatedly, since Phase 8), but nobody has actually run this Blueprint against a real Render account yet. That's a real difference from almost everything else in this log — everywhere else, "manually tested" meant tested against the running app; here it means "written correctly per the spec, not yet proven against the real service." Flagging that gap explicitly rather than letting "tested" quietly mean two different things.
+
+**Known, accepted tradeoff:** Render's free web services spin down after 15 minutes idle and take about a minute to wake up on the next request. Documented in the README rather than worked around — a paid "always-on" tier is the only real fix, and that's explicitly off the table per the $0 hosting budget this whole phase (10 and 11) exists to satisfy.
+
+---
+
 ## What's next
 
 **Fully built:** the four core flows from the spec end to end, against a real SQLite-compatible backend (libSQL — a local file in dev, Turso in production) that's actually deployable on a host that's free, sitting behind real `@uconn.edu` authentication, with real email delivery (Resend) for sign-in links and for request/accept notifications. The two rules the app is organized around — exact location/contact info never leave the server until a specific request is accepted, and only the account that owns a listing can act on it — are both enforced server-side, not bolted onto the UI. All of it manually tested through the running app as multiple real accounts, not just reviewed by reading the code.
 
-**Not yet actually deployed** — the production startup path (build the client, boot with `NODE_ENV=production`) has been tested locally repeatedly, but nobody has created a real Render service, a real Turso database, or added real `RESEND_API_KEY`/`TURSO_*` values anywhere yet. That's the next thing that has to happen outside a coding session, not something a coding session can verify for itself. The Render-specific deploy config (a `render.yaml`, updated from the now-superseded `railway.toml` path) is the next branch.
+**Not yet actually deployed** — `render.yaml` exists and is checked against Render's documented Blueprint spec, and the production startup path it points at (build the client, boot with `NODE_ENV=production`) has been tested locally repeatedly. But nobody has applied the Blueprint against a real Render account, created a real Turso database, or filled in real `RESEND_API_KEY`/`BASE_URL`/`TURSO_*` values anywhere yet. That's the next thing that has to happen outside a coding session, not something a coding session can verify for itself.
 
 **Stubbed or deliberately deferred:**
 
