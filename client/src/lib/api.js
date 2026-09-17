@@ -31,6 +31,14 @@ export function fetchMyProviders() {
   return request('/providers/mine');
 }
 
+export function updateProvider(id, payload) {
+  return request(`/providers/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+
+export function deleteProvider(id) {
+  return request(`/providers/${id}`, { method: 'DELETE' });
+}
+
 export function fetchProviderRequests(providerId) {
   return request(`/providers/${providerId}/requests`);
 }
@@ -48,4 +56,8 @@ export function updateRequestStatus(requestId, status) {
     method: 'PATCH',
     body: JSON.stringify({ status }),
   });
+}
+
+export function deleteRequest(requestId) {
+  return request(`/requests/${requestId}`, { method: 'DELETE' });
 }

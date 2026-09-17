@@ -161,6 +161,34 @@ requestsRouter.patch(
   })
 );
 
+// Withdraw a request you sent. Restricted to your own requests, and only
+// while still pending — once a provider has acted on it (accepted/
+// declined), that's now their record too, so it's left alone rather than
+// disappearing out from under them.
+requestsRouter.delete(
+  '/:id',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const existingResult = await db.execute({
+      sql: 'SELECT * FROM requests WHERE id = ?',
+      args: [req.params.id],
+    });
+    const existing = existingResult.rows[0];
+    if (!existing) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    if (existing.requester_user_id !== req.user.id) {
+      return res.status(403).json({ error: 'You did not send this request' });
+    }
+    if (existing.status !== 'pending') {
+      return res.status(409).json({ error: 'Only a pending request can be withdrawn' });
+    }
+
+    await db.execute({ sql: 'DELETE FROM requests WHERE id = ?', args: [req.params.id] });
+    res.json({ ok: true });
+  })
+);
+
 function serializeForRequester(row) {
   return {
     id: row.id,
