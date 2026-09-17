@@ -4,7 +4,17 @@ services:
     runtime: node
     plan: free
     region: virginia
-    buildCommand: npm install && npm run build
+    # --include=dev is load-bearing, not optional: NODE_ENV=production is
+    # set below for the whole service, and npm install skips
+    # devDependencies whenever NODE_ENV=production is already in the
+    # environment — which it is here, since Render applies a service's env
+    # vars during the build step too, not just at runtime. vite,
+    # @vitejs/plugin-react, and tailwindcss are all devDependencies of
+    # client/, so without this flag the build step fails with
+    # "vite: not found" — confirmed by reproducing the exact failure
+    # locally (a plain `NODE_ENV=production npm install` really does
+    # install ~80 fewer packages and omit vite) before writing this fix.
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
