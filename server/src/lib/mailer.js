@@ -15,18 +15,23 @@ function getResendClient() {
   return resend;
 }
 
-// The one function every auth/notification route depends on for actually
-// getting an email out. In dev this just logs — server/src/routes/auth.js
-// separately decides whether to also hand the raw link back in the API
-// response (devLoginUrl), so that shortcut lives there, not here; this
-// function's only job is "does the email go out or not."
-export async function sendMagicLinkEmail(email, url) {
+// Shared by every exported function below — in dev this just logs to the
+// console (server/src/routes/auth.js separately decides whether to also
+// hand a raw sign-in link back in the API response; that shortcut lives
+// there, not here). Outside dev, it actually sends via Resend. Pulled out
+// once both the sign-in email and the two notification emails needed the
+// exact same "log in dev, send for real otherwise" behavior — three copies
+// of the same branch would've been one to keep in sync by hand.
+async function sendEmail({ to, subject, html, devLabel }) {
   if (IS_DEV) {
-    console.log(`\n[mailer] Sign-in link for ${email}:\n  ${url}\n`);
+    console.log(`\n[mailer] ${devLabel}\n`);
     return;
   }
-  await getResendClient().emails.send({
-    from: FROM_ADDRESS,
+  await getResendClient().emails.send({ from: FROM_ADDRESS, to, subject, html });
+}
+
+export async function sendMagicLinkEmail(email, url) {
+  await sendEmail({
     to: email,
     subject: 'Your HuskyBook sign-in link',
     html: `
@@ -35,5 +40,32 @@ export async function sendMagicLinkEmail(email, url) {
       <p><a href="${url}">Sign in to HuskyBook</a></p>
       <p>If you didn't request this, ignore this email.</p>
     `,
+    devLabel: `Sign-in link for ${email}:\n  ${url}`,
+  });
+}
+
+export async function sendRequestNotification(providerEmail, requesterName, listingName) {
+  await sendEmail({
+    to: providerEmail,
+    subject: `New request for "${listingName}"`,
+    html: `
+      <p>Hi,</p>
+      <p><strong>${requesterName}</strong> just requested your listing "${listingName}" on HuskyBook.</p>
+      <p>Open Manage Requests in the app to accept or decline.</p>
+    `,
+    devLabel: `New request for ${providerEmail}: ${requesterName} requested "${listingName}"`,
+  });
+}
+
+export async function sendRequestStatusUpdate(requesterEmail, status, listingName) {
+  await sendEmail({
+    to: requesterEmail,
+    subject: `Your request was ${status}`,
+    html: `
+      <p>Hi,</p>
+      <p>Your request for "${listingName}" on HuskyBook was <strong>${status}</strong>.</p>
+      ${status === 'accepted' ? "<p>Check My Requests in the app for the provider's location and contact info.</p>" : ''}
+    `,
+    devLabel: `Status update for ${requesterEmail}: "${listingName}" was ${status}`,
   });
 }

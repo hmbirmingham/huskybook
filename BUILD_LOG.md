@@ -133,25 +133,66 @@ Partway through this phase, the brief changed: instead of hair cuts specifically
 
 ---
 
+## Sprint 1 — email delivery, deployment, notifications
+
+A sprint plan arrived from the user partway through this build (2026-09-16), targeting a November 1st open beta across three sprints. Sprint 1's stated goal: "app is live and email works — nothing else matters until this is done." Three branches, logged separately below since each got its own PR, but they're one sprint toward one goal.
+
+### Phase 7 — Resend email delivery (`feat/resend-email`)
+
+**What I'm building:** real email delivery for the magic-link sign-in, replacing the console-log-only mailer from Phase 6.
+
+**Decision — keep the NODE_ENV branch inside `mailer.js`, not in the route.** The sprint plan's snippet put the dev/prod branch and the `devLoginUrl` return value in the same function. Split them instead: `mailer.js`'s `sendMagicLinkEmail` only decides *whether the email goes out*; `server/src/routes/auth.js` already separately decided (back in Phase 6) whether to *also* hand the raw link back in the API response. Merging those two concerns into one function would mean the dev-response shortcut and the email-sending logic have to agree with each other by coincidence instead of by construction. Kept them as two independent decisions that happen to both key off `NODE_ENV`.
+
+**Bug hit and fixed before it shipped — constructing the Resend client at module load.** First pass wrote `const resend = new Resend(process.env.RESEND_API_KEY)` at the top of the file. The Resend SDK throws synchronously in its constructor if the key is missing or empty — which meant if this ever ran in production before `RESEND_API_KEY` was set (exactly the state a first deploy is in), the *entire server* would crash on import, taking down browsing and everything else with it, not just email sending. Caught this by actually testing `NODE_ENV=production` locally with no key configured before considering the branch done — it crashed immediately, confirming the bug. Fixed by constructing the client lazily, inside the function, on first real send: a missing key now only breaks the one thing that actually needs it.
+
+**Manual test:** confirmed dev mode is unchanged (still logs, still no Resend import touched). Confirmed `NODE_ENV=production` with no `RESEND_API_KEY` set boots cleanly and serves `/api/health` — the fix above, verified.
+
+### Phase 8 — Railway deployment config (`feat/deploy-config`)
+
+**What I'm building:** the config to actually deploy this as a Railway service — `railway.toml`, a health check, env var documentation, and (found while building this) a way to serve the client at all.
+
+**Gap found in the plan — no build step for the client.** The sprint plan's `start` script only ran `node server/src/index.js`, with no mention of building or serving the React app. As written, a Railway deploy would expose the API and nothing else — the plan's own "verify after deploy" checklist (click through the sign-in flow, create a listing, etc.) would be impossible to actually perform against it. Fixed by adding a root `build` script (`vite build` for the client) and having `index.js` serve `client/dist` itself in production, with an Express catch-all falling back to `index.html` for client-side routes so `/verify`, `/manage`, etc. don't 404 on a direct load or refresh. One Railway service serving both the API and the built SPA, rather than the plan's implicit assumption of a second static host that was never specified.
+
+**Decision — rename `CLIENT_ORIGIN` to `BASE_URL`.** Phase 6 introduced `CLIENT_ORIGIN` for building the magic-link URL. The sprint plan's env var list calls the same concept `BASE_URL`. Renamed to match, since this is the name that's going to live in Railway's dashboard and in every future doc referencing it — no reason to keep two names for one URL.
+
+**Decision — didn't wire up `SESSION_SECRET`.** It's in the sprint plan's env var list, but nothing in this app's session design uses a secret: sessions are opaque random tokens looked up against the `sessions` table, not signed or encrypted cookies, so there's nothing for a "session secret" to sign. Adding the env var without a corresponding use would be documentation theater — a variable someone dutifully sets in Railway that does nothing. Left it out of `.env.example`, which only lists variables the running code actually reads; flagged this decision back to the user rather than silently dropping a named requirement.
+
+**Manual test:** built the client, ran the full server with `NODE_ENV=production`, and confirmed the API, static assets, and a client-side-only route (`/manage`, not a real file) all resolved correctly from the same process and port.
+
+### Phase 9 — Request/accept email notifications (`feat/notifications`)
+
+**What I'm building:** the two notification events from the sprint plan — a provider learns about a new request, a requester learns about a decision — without either one being able to break the request/accept flow itself if email delivery has a bad day.
+
+**Decision — fire after the response, not before.** Both `POST /requests` and `PATCH /requests/:id` call `res.json()` first and kick off the notification email afterward, wrapped in a `notify()` helper that `.catch()`s and logs instead of throwing. The user submitting or accepting a request is waiting on that action succeeding, not on whether an email happened to send — those are genuinely different failure domains, and coupling them would mean a mail provider hiccup turns into a broken core feature.
+
+**Consistent with seed data being unclaimed (Phase 3):** a request against one of the seeded demo listings has no `owner_user_id` to resolve an email from, so `POST /requests` just skips sending — silently, not as an error, since there's nothing wrong, just nobody real to notify.
+
+**Manual test:** created a request from one real account to another's real listing, confirmed the provider-notification log line; accepted it, confirmed the requester status-update log line with the correct listing name and status.
+
+---
+
 ## What's next
 
-**Fully built:** the four core flows from the spec end to end, against a real (if small) SQLite backend, now sitting behind real `@uconn.edu` authentication rather than a typed name. Browse/filter, request, list yourself, accept/decline, and the two rules the app is organized around — exact location/contact info never leave the server until a specific request is accepted, and only the account that owns a listing can act on it — both enforced server-side (query/serializer layer for the first, session-checked ownership for the second), not bolted onto the UI. All of it manually tested through the running app as multiple real accounts, not just reviewed by reading the code.
+**Fully built:** the four core flows from the spec end to end, against a real (if small) SQLite backend, sitting behind real `@uconn.edu` authentication, with real email delivery (Resend) for sign-in links and for request/accept notifications, and Railway deployment config that's actually been verified to serve the full app (not just the API) from one process. The two rules the app is organized around — exact location/contact info never leave the server until a specific request is accepted, and only the account that owns a listing can act on it — are both enforced server-side, not bolted onto the UI. All of it manually tested through the running app as multiple real accounts, not just reviewed by reading the code.
+
+**Not yet actually deployed** — the config exists and has been tested locally in production mode, but nobody has run `railway up` yet, added a real `RESEND_API_KEY`, or mounted the volume. That's the next thing that has to happen outside a coding session, not something a coding session can verify for itself.
 
 **Stubbed or deliberately deferred:**
 
-- **Booking/scheduling.** Providers can't yet define availability, and there's no calendar/appointment concept beyond a request's status. This is the next major piece of scope (see the in-progress work beyond this log).
+- **Booking/scheduling.** Providers can't yet define availability, and there's no calendar/appointment concept beyond a request's status.
 - **Payment connectors.** No Venmo/Cash App linking yet, and no deposit terms on a listing. Scoped deliberately narrow when it lands: a link/handle a provider adds and a requester follows to pay *outside* the app — HuskyBook itself never touches or processes money.
-- **Notifications.** A provider currently only finds out about a request by opening Manage Requests. No email, push, or polling badge count yet. More natural to build now that there's a real email address per account to notify.
-- **Location features beyond the free-text building/zone field.** No structured campus building picker, no live "on my way"/"arrived" status for mobile bookings.
 - **Social handles.** Providers can't yet attach Instagram/TikTok/etc. to a listing.
+- **Location features beyond the free-text building/zone field.** No structured campus building picker, no live "on my way"/"arrived" status for mobile bookings.
 - **Pagination on the directory.** Fine at seed-data scale; would need it before any real traffic.
-- **Rate limiting / abuse prevention beyond the login-link cooldown.** Nothing stops a signed-in account from spamming requests at a provider or creating many listings. Real accounts make this more tractable than it was pre-auth, but nothing beyond the one-link-per-minute cooldown is built yet.
+- **Rate limiting / abuse prevention beyond the login-link cooldown.** Nothing stops a signed-in account from spamming requests at a provider or creating many listings.
 - **Editing or deleting a listing/request.** Once posted, still permanent from the UI's perspective.
-- **Tests.** Still no automated test suite — everything in this log is verified by hand against the running app, now including full two-account auth flows. The privacy-gating SQL and the ownership checks in `providers.js`/`requests.js` are exactly the kind of logic that deserves regression coverage instead of "I checked it by hand" — more true now that there are real security boundaries to protect, not fewer.
+- **Tests.** Still no automated test suite — everything in this log is verified by hand against the running app. The privacy-gating SQL and the ownership checks in `providers.js`/`requests.js` are exactly the kind of logic that deserves regression coverage instead of "I checked it by hand."
 - **Account recovery / email re-verification.** Sign-in only proves "clicked a link sent to this address" once — no re-confirmation later, no way to recover if a `@uconn.edu` account is ever compromised or the email changes.
+- **Feedback channel.** No in-app way for a beta user to report a problem yet.
 
 **What I'd do differently with more time:**
 
 - What Phase 6's log entry already said before it happened: build the auth seam *before* the four flows, not alongside them. Having lived through the retrofit now, the actual cost was mostly in Manage Requests, which had grown real complexity (the stale-listing-id recovery flow) specifically to compensate for not having real ownership yet — complexity that turned out to be temporary scaffolding, not permanent product logic. Real auth first would have skipped building that scaffolding at all.
 - Write the SQL privacy-gating logic (the `CASE WHEN status = 'accepted'` pattern in `requests.js`) and the ownership checks in `providers.js`/`requests.js` as a small set of automated tests, rather than relying on repeated manual curl/browser checks through every phase. Both have held up every time by hand, but that's a fragile guarantee for the two rules this entire app exists to enforce.
 - Decide the category taxonomy (`hair | nails | makeup | braids | other`) with more research into what UConn students actually offer, rather than picking a reasonable-looking list. `other` doing a lot of quiet work in the current enum is a sign it's probably incomplete.
+- Sprint 1's plan specified a `start` script but not a `build` step, which would have shipped an API with no way to reach the actual app. Worth remembering generally: a deployment plan that hasn't been run once, even locally in production mode, can look complete while skipping the one step that makes the other nine matter. Caught it here by actually building the client and running the full server locally before calling the branch done, rather than trusting the plan's checklist at face value.
