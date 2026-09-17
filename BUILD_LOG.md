@@ -227,6 +227,34 @@ A sprint plan arrived from the user partway through this build (2026-09-16), tar
 
 ---
 
+## Sprint 2 — Phase 14: automated tests for the two rules that matter (`test/privacy-and-ownership`)
+
+**What I'm building:** the thing "What I'd do differently" flagged twice in this log by name — automated coverage for the location-unlock SQL and the ownership checks, instead of relying on repeated manual curl/browser walkthroughs every phase. Sprint scope, and the domain-verified-but-still-spam question, were both confirmed with the user directly before starting rather than assumed: this sprint is tests only, and the spam issue (Resend shows the sending domain as fully verified — SPF/DKIM green — yet mail still lands in spam) is a separate, already-flagged follow-up, not something folded into this branch.
+
+**Decision — `node:test` over Vitest/Jest.** Same reasoning as Phase 1's `node:sqlite` pick: it ships in the runtime the project already requires (`engines: >=18`), so it's zero new dependencies for a server that currently has exactly four (`@libsql/client`, `cors`, `express`, `resend`). Nothing about this app's test needs (HTTP integration tests against Express, a couple of unit tests) calls for a heavier runner.
+
+**Decision — real HTTP integration tests over calling route handlers directly.** Each test file boots the actual Express app on an ephemeral port (`app.listen(0)`) and drives it with the platform `fetch`, including a real magic-link sign-in (`POST /request-link` → `devLoginUrl` → `GET /verify` → session cookie) rather than inserting a session row directly. The privacy and ownership rules live partly in SQL (`CASE WHEN status = 'accepted'`), partly in route handlers, and partly in `requireAuth` middleware — a test that skips the HTTP layer to call a handler function directly would stop testing the thing that actually matters, which is what a real request over the wire gets back.
+
+**Refactor this required — split `app.js` out of `index.js`.** `index.js` used to build the Express app and call `app.listen()` in the same file. Tests need the app object without binding the real configured port (or starting a real production `.listen()` that never resolves). Moved everything up through the error-handling middleware into `server/src/app.js` (exporting `app`), leaving `index.js` as just `app.listen(...)` plus the existing boot-time env-check log. No behavior change — confirmed by booting `NODE_ENV=production` against it directly, the same check that's caught two real bugs earlier in this log (Sprint 1's static-serving gap, Phase 12's devDependency bug).
+
+**Decision — a `DATABASE_URL` env var override in `db/index.js`, additive only.** Every test file needs its own throwaway sqlite file so tests can't stomp on the real dev database or on each other. `db/index.js` now checks `DATABASE_URL` before falling back to the existing `TURSO_DATABASE_URL` / local-file logic from Phase 10 — checked first specifically so a developer's local `.env` can't accidentally point a test run at production. Default behavior (no env vars set) is byte-for-byte unchanged.
+
+**Bug hit in my own test helper, caught immediately by the suite itself:** the shared `api()` fetch wrapper attached a JSON body to every call, including `GET`s — `fetch` throws (`Request with GET/HEAD method cannot have body`) rather than silently ignoring it. Fixed by skipping the body for `GET`/`HEAD`. Exactly the kind of thing this sprint is for: a real assertion catching a real mistake immediately, instead of a manual walkthrough that might not have exercised that exact call shape.
+
+**Bug hit in file naming, not code:** first pass named the shared test helper module `test-helpers.js`. Node's default `--test` file discovery matches a `test-*.js` filename pattern globally, not just inside a `test/` directory — so it got silently picked up and run as its own (trivially passing, zero-assertion) test. Renamed to `server/spec-helpers.js`, which matches none of the runner's default patterns (`*.test.js`, `*-test.js`, `*_test.js`, `test-*.js`, `test.js`, or any file inside a directory literally named `test`), and confirmed the phantom test disappeared from the run output on the next pass.
+
+**Coverage added, 18 tests across four files (`server/test/`):**
+- `serialize.test.js` — `toPublicProvider` never carries `exactLocation`/`contactMethod`, `toOwnerProvider` does; a string-search assertion against the serialized JSON as a belt-and-suspenders check against a future field-rename slipping a private value through under a different key.
+- `privacy.test.js` — the full location-unlock lifecycle end to end over real HTTP: a public directory listing never carries the private fields; a pending request hides them; accepting one unlocks them only for that specific requester (a third, uninvolved account sees nothing); declining keeps them hidden; a provider's own freshly-submitted listing correctly echoes its own private fields back (the Phase 3 "this looks like a leak but isn't" case, now a regression test instead of a comment explaining why it's fine).
+- `ownership.test.js` — a non-owner 403s viewing another listing's incoming requests or acting on one of its requests, the actual owner can; every route that requires a session 401s with no cookie at all; the public directory route stays public with no session.
+- `auth.test.js` — non-`@uconn.edu` emails are rejected; a login token is single-use (the exact property whose violation, via React StrictMode's double-invoke, was the Phase 6 bug); an unknown token is rejected; a repeated link request inside the cooldown window doesn't reveal a second `devLoginUrl`, matching the "can't distinguish spammed from sent" property from Phase 6's log entry.
+
+**Manual verification, on top of the suite itself:** ran `npm run test` from the repo root (proxies to the server workspace) to confirm the root-level script works, and re-ran a full `NODE_ENV=production` boot after the `app.js` split to confirm no behavior changed for the one thing that's broken silently before (Phase 8, Phase 12).
+
+**Not done in this phase, on purpose:** no tests for the client (React) — the sprint's own framing, and every "write this as a test" note earlier in this log, was specifically about the server-side privacy/ownership logic, not UI behavior. No CI wiring (GitHub Actions or similar) to run this suite automatically on push — the suite exists now; running it automatically on every change is a reasonable next step but a separate decision, not assumed here.
+
+---
+
 ## What's next
 
 **Fully built:** the four core flows from the spec end to end, against a real SQLite-compatible backend (libSQL — a local file in dev, Turso in production) that's actually deployable on a host that's free, sitting behind real `@uconn.edu` authentication, with real email delivery (Resend) for sign-in links and for request/accept notifications. The two rules the app is organized around — exact location/contact info never leave the server until a specific request is accepted, and only the account that owns a listing can act on it — are both enforced server-side, not bolted onto the UI. All of it manually tested through the running app as multiple real accounts, not just reviewed by reading the code.
@@ -242,7 +270,7 @@ A sprint plan arrived from the user partway through this build (2026-09-16), tar
 - **Pagination on the directory.** Fine at seed-data scale; would need it before any real traffic.
 - **Rate limiting / abuse prevention beyond the login-link cooldown.** Nothing stops a signed-in account from spamming requests at a provider or creating many listings.
 - **Editing or deleting a listing/request.** Once posted, still permanent from the UI's perspective.
-- **Tests.** Still no automated test suite — everything in this log is verified by hand against the running app. The privacy-gating SQL and the ownership checks in `providers.js`/`requests.js` are exactly the kind of logic that deserves regression coverage instead of "I checked it by hand."
+- **Tests, partially addressed (Sprint 2 / Phase 14).** The privacy-gating SQL and ownership checks now have automated HTTP-level coverage (`server/test/`, `npm run test`). Still no coverage for the client (React), and no CI wiring to run the suite automatically on push — both still manual/deferred.
 - **Account recovery / email re-verification.** Sign-in only proves "clicked a link sent to this address" once — no re-confirmation later, no way to recover if a `@uconn.edu` account is ever compromised or the email changes.
 - **Feedback channel.** No in-app way for a beta user to report a problem yet.
 
