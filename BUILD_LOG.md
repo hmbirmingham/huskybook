@@ -205,11 +205,23 @@ A sprint plan arrived from the user partway through this build (2026-09-16), tar
 
 ---
 
+## Phase 12 — Fix the real Render build failure (`fix/render-build-devdeps`)
+
+**What happened:** the user actually applied the Render Blueprint from Phase 11 against a real Render account for the first time. It failed on the very first deploy: `sh: 1: vite: not found`, npm error code 127, during `npm run build -w client`.
+
+**Root cause, confirmed by reproducing it locally rather than guessing from the error text:** `render.yaml` sets `NODE_ENV=production` as an env var on the service, and Render applies a service's configured env vars during the build step, not just at runtime. `npm install` skips `devDependencies` whenever `NODE_ENV=production` is already set in the environment it runs in — and `vite`, `@vitejs/plugin-react`, and `tailwindcss` are all `devDependencies` of `client/`. So the build step had nothing to build the client with. This is exactly the gap flagged honestly in Phase 11's log entry: everything had been tested locally, but `npm install` had only ever been run there *without* `NODE_ENV=production` already set going in — Phase 10's production-mode tests always built first, then separately set `NODE_ENV=production` only for the `node server/src/index.js` runtime step, never for the install step itself. A real deploy is the one thing that runs both under the identical environment, and that's exactly where the gap was.
+
+**Fix:** `buildCommand` now runs `npm install --include=dev` before `npm run build`, forcing devDependencies in regardless of `NODE_ENV`. Confirmed the failure first (a clean-room `NODE_ENV=production npm install` in a scratch copy of the repo really does install roughly 80 fewer packages and omits `vite` entirely), then confirmed `--include=dev` fixes it, then re-ran the complete build-then-start sequence from a from-scratch checkout before pushing the fix — the same discipline as every other bug in this log, just triggered by a real deploy instead of a local test this time.
+
+**Also verified while credentials were available:** with the user's real Turso database URL and auth token (shared directly, not committed anywhere), ran the app's schema initialization against the actual hosted database for the first time — all six tables created correctly — and a full insert/read/delete round trip to confirm the `lastInsertRowid` BigInt handling from Phase 10 behaves identically against real Turso, not just local libSQL. Cleaned up completely afterward (confirmed zero rows in every table) since this is the user's real production database, not a scratch environment.
+
+---
+
 ## What's next
 
 **Fully built:** the four core flows from the spec end to end, against a real SQLite-compatible backend (libSQL — a local file in dev, Turso in production) that's actually deployable on a host that's free, sitting behind real `@uconn.edu` authentication, with real email delivery (Resend) for sign-in links and for request/accept notifications. The two rules the app is organized around — exact location/contact info never leave the server until a specific request is accepted, and only the account that owns a listing can act on it — are both enforced server-side, not bolted onto the UI. All of it manually tested through the running app as multiple real accounts, not just reviewed by reading the code.
 
-**Not yet actually deployed** — `render.yaml` exists and is checked against Render's documented Blueprint spec, and the production startup path it points at (build the client, boot with `NODE_ENV=production`) has been tested locally repeatedly. But nobody has applied the Blueprint against a real Render account, created a real Turso database, or filled in real `RESEND_API_KEY`/`BASE_URL`/`TURSO_*` values anywhere yet. That's the next thing that has to happen outside a coding session, not something a coding session can verify for itself.
+**In progress, not yet live.** A real Turso database exists and its schema has been verified against it directly (Phase 12). A real Render Blueprint deploy has been attempted and hit one real bug (also Phase 12, now fixed) — the next deploy attempt should get further. Still outstanding: a real `RESEND_API_KEY` (blocked on deciding what sending domain to verify, since the hardcoded `noreply@huskybook.app` sender needs a domain Resend can actually verify), and `BASE_URL` needs to be set to whatever URL Render actually assigns once the service is live.
 
 **Stubbed or deliberately deferred:**
 
