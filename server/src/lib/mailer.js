@@ -6,7 +6,11 @@ const IS_DEV = process.env.NODE_ENV !== 'production';
 // sending (a stream of magic links to strangers' @uconn.edu addresses)
 // never touches whatever reputation/DNS setup the portfolio root domain
 // already has.
-const FROM_ADDRESS = 'HuskyBook <noreply@huskybook.hmbirmingham.me>';
+// Not "noreply@" — Resend's own deliverability insights flagged it as a
+// real spam signal (mail providers pattern-match "noreply"-style
+// addresses as bulk/automated mail), confirmed after a real test send
+// landed in spam rather than the inbox.
+const FROM_ADDRESS = 'HuskyBook <hello@huskybook.hmbirmingham.me>';
 
 // Constructed lazily, on first real send, rather than at module load. The
 // Resend constructor throws synchronously if RESEND_API_KEY is missing —
