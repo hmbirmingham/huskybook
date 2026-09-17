@@ -1,0 +1,24 @@
+services:
+  - name: huskybook
+    type: web
+    runtime: node
+    plan: free
+    region: virginia
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Everything below has no committed value — Render prompts for each
+      # of these once, in the dashboard, when the Blueprint is first
+      # applied. See .env.example for what each one is and where it comes
+      # from; never put real values in this file.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: BASE_URL
+        sync: false
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
