@@ -217,6 +217,16 @@ A sprint plan arrived from the user partway through this build (2026-09-16), tar
 
 ---
 
+## Phase 13 — Real sending domain for Resend (`fix/resend-sender-domain`)
+
+**What happened:** `huskybook.app` in `mailer.js`'s `FROM_ADDRESS` was always a placeholder carried over from the original sprint plan's example code — nobody owns that domain, so Resend could never have verified it no matter how correctly `RESEND_API_KEY` was configured. Asked the user directly what domain they actually own; the answer was their portfolio domain, `hmbirmingham.me`.
+
+**Decision — a subdomain, not the root domain.** Sending from `noreply@huskybook.hmbirmingham.me` instead of `noreply@hmbirmingham.me`. Resend verifies a subdomain with its own independent DKIM/SPF records, so this app's transactional email — a steady stream of magic links to strangers' `@uconn.edu` addresses, a very different sending pattern than a personal portfolio site — never shares sending reputation or DNS configuration with the root domain. If HuskyBook's mail ever got flagged as spam somewhere, the fallout stays contained to the subdomain, not the person's own portfolio email.
+
+**Still outstanding, and it's a real setup step, not just an env var:** having a domain isn't the same as having it verified. The user still needs to add `huskybook.hmbirmingham.me` in Resend's dashboard and create the DNS records Resend provides (wherever `hmbirmingham.me`'s DNS is actually managed) before `RESEND_API_KEY` alone will result in delivered mail.
+
+---
+
 ## What's next
 
 **Fully built:** the four core flows from the spec end to end, against a real SQLite-compatible backend (libSQL — a local file in dev, Turso in production) that's actually deployable on a host that's free, sitting behind real `@uconn.edu` authentication, with real email delivery (Resend) for sign-in links and for request/accept notifications. The two rules the app is organized around — exact location/contact info never leave the server until a specific request is accepted, and only the account that owns a listing can act on it — are both enforced server-side, not bolted onto the UI. All of it manually tested through the running app as multiple real accounts, not just reviewed by reading the code.
