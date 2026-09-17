@@ -12,6 +12,7 @@
     "node": ">=22.5.0"
   },
   "dependencies": {
+    "@libsql/client": "^0.18.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "resend": "^6.28.1"

@@ -67,15 +67,15 @@ CREATE TABLE IF NOT EXISTS sessions (
 // against PRAGMA table_info before altering. This is the first real schema
 // migration in the app; see BUILD_LOG for why it's still handled inline
 // here rather than reaching for a migration tool for one change.
-export function runMigrations(db) {
-  addColumnIfMissing(db, 'providers', 'owner_user_id', 'INTEGER REFERENCES users(id)');
-  addColumnIfMissing(db, 'requests', 'requester_user_id', 'INTEGER REFERENCES users(id)');
+export async function runMigrations(db) {
+  await addColumnIfMissing(db, 'providers', 'owner_user_id', 'INTEGER REFERENCES users(id)');
+  await addColumnIfMissing(db, 'requests', 'requester_user_id', 'INTEGER REFERENCES users(id)');
 }
 
-function addColumnIfMissing(db, table, column, definition) {
-  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
-  const exists = columns.some((c) => c.name === column);
+async function addColumnIfMissing(db, table, column, definition) {
+  const result = await db.execute(`PRAGMA table_info(${table})`);
+  const exists = result.rows.some((c) => c.name === column);
   if (!exists) {
-    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
 }
