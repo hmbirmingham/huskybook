@@ -1,6 +1,14 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { sendRequestNotification, sendRequestStatusUpdate } from '../lib/mailer.js';
+
+// Email delivery never blocks or fails a request/response cycle — a flaky
+// mail provider shouldn't be able to break the actual feature (submitting
+// or accepting a request). Errors are logged, not surfaced to the client.
+function notify(promise) {
+  promise.catch((err) => console.error('[mailer] notification failed:', err.message));
+}
 
 export const requestsRouter = Router();
 
@@ -38,7 +46,14 @@ requestsRouter.post('/', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'providerId is required' });
   }
 
-  const provider = db.prepare('SELECT id FROM providers WHERE id = ?').get(providerId);
+  const provider = db
+    .prepare(
+      `SELECT providers.name, users.email AS owner_email
+       FROM providers
+       LEFT JOIN users ON users.id = providers.owner_user_id
+       WHERE providers.id = ?`
+    )
+    .get(providerId);
   if (!provider) {
     return res.status(404).json({ error: 'Provider not found' });
   }
@@ -51,6 +66,12 @@ requestsRouter.post('/', requireAuth, (req, res) => {
 
   const row = fetchRequestForRequester(result.lastInsertRowid);
   res.status(201).json(serializeForRequester(row));
+
+  // Seed/demo listings have no owner_user_id (see seed.js) and so no email
+  // to notify — nothing to send in that case, not an error.
+  if (provider.owner_email) {
+    notify(sendRequestNotification(provider.owner_email, req.user.display_name, provider.name));
+  }
 });
 
 // The signed-in user's own sent requests. Filtered by requester_user_id,
@@ -85,7 +106,7 @@ requestsRouter.patch('/:id', requireAuth, (req, res) => {
     return res.status(404).json({ error: 'Request not found' });
   }
 
-  const provider = db.prepare('SELECT owner_user_id FROM providers WHERE id = ?').get(existing.provider_id);
+  const provider = db.prepare('SELECT name, owner_user_id FROM providers WHERE id = ?').get(existing.provider_id);
   if (!provider || provider.owner_user_id !== req.user.id) {
     return res.status(403).json({ error: 'You do not own the listing this request was sent to' });
   }
@@ -100,6 +121,13 @@ requestsRouter.patch('/:id', requireAuth, (req, res) => {
     status: updated.status,
     createdAt: updated.created_at,
   });
+
+  const requester = updated.requester_user_id
+    ? db.prepare('SELECT email FROM users WHERE id = ?').get(updated.requester_user_id)
+    : null;
+  if (requester) {
+    notify(sendRequestStatusUpdate(requester.email, status, provider.name));
+  }
 });
 
 function serializeForRequester(row) {
