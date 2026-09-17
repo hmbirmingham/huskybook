@@ -16,13 +16,20 @@ const LOCAL_DB_PATH = path.join(DATA_DIR, 'huskybook.sqlite');
 // with no persistent disk of its own (Render) can still keep data that
 // survives a redeploy, without the app's own SQL or query code changing
 // at all — only where the bytes live changes.
+//
+// DATABASE_URL is a third, explicit override on top of those two — used
+// only by the test suite (server/test-helpers.js) to point each test run
+// at its own throwaway file instead of the real dev database. It takes
+// priority over TURSO_DATABASE_URL so a developer's local .env can't
+// accidentally point a test run at production.
 const usingTurso = Boolean(process.env.TURSO_DATABASE_URL);
-if (!usingTurso) {
+const url = process.env.DATABASE_URL || (usingTurso ? process.env.TURSO_DATABASE_URL : `file:${LOCAL_DB_PATH}`);
+if (!process.env.DATABASE_URL && !usingTurso) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
 export const db = createClient({
-  url: usingTurso ? process.env.TURSO_DATABASE_URL : `file:${LOCAL_DB_PATH}`,
+  url,
   authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
