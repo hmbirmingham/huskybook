@@ -25,16 +25,20 @@ npm run seed
 
 ## Deployment
 
-Target host is [Render](https://render.com) (free tier, no card required for a web service) rather than Railway — Railway isn't a free option for this project. `railway.toml` is still in the repo and still works if that ever changes, but it isn't the maintained path; Render-specific config lands in a later BUILD_LOG phase.
+Target host is [Render](https://render.com) — free web service tier, no card required. (`railway.toml` is still in the repo in case Railway access ever changes, but it isn't the maintained path; Fly.io was also considered and ruled out since it now requires a card even for its trial.)
 
-Either way, the app builds and runs the same: `npm run build` builds the client (`vite build` → `client/dist`), `npm run start` runs `node server/src/index.js`, which in production also serves `client/dist` itself and falls back to `index.html` for client-side routes (see the `IS_PRODUCTION` block in `server/src/index.js`). One process, one URL — no separate static host to configure.
+**To deploy:** push this repo to GitHub (already done), then in Render's dashboard use "New > Blueprint" and point it at the repo — `render.yaml` at the root defines the service, so most of the setup happens automatically. Render will prompt for the environment variables marked `sync: false` in that file (see below) the first time the Blueprint is applied.
 
-**Environment variables** — see `.env.example` for the full list with descriptions. Set these in your host's dashboard, not in a committed file:
+The app builds and runs the same regardless of host: `npm run build` builds the client (`vite build` → `client/dist`), `npm run start` runs `node server/src/index.js`, which in production also serves `client/dist` itself and falls back to `index.html` for client-side routes (see the `IS_PRODUCTION` block in `server/src/index.js`). One process, one URL — no separate static host to configure.
 
-- `NODE_ENV=production`
+**Environment variables** — see `.env.example` for the full list with descriptions. `render.yaml` declares which ones exist but never their values; set the actual values in Render's dashboard when prompted, not in a committed file:
+
+- `NODE_ENV=production` — the one value `render.yaml` does set directly, since it's not a secret.
 - `RESEND_API_KEY` — from [resend.com](https://resend.com); without it, magic-link emails fail to send in production (the app itself still boots and serves the directory fine — see BUILD_LOG Sprint 1 for why that failure is isolated rather than crashing the whole process)
-- `BASE_URL` — the deployed app's own public URL, no trailing slash. Used to build the link inside the sign-in email, so it has to match wherever this is actually reachable.
-- `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` — from [turso.tech](https://turso.tech) (free, no card required). **Required for data to survive a redeploy.** Without these the app silently falls back to a local file, which most free hosts (Render's free tier included) don't persist across deploys — see BUILD_LOG for the full reasoning behind this over a Railway volume.
+- `BASE_URL` — the deployed app's own public URL, no trailing slash (Render assigns this — something like `https://huskybook.onrender.com` — once the service exists). Used to build the link inside the sign-in email, so it has to match wherever this is actually reachable.
+- `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` — from [turso.tech](https://turso.tech) (free, no card required). **Required for data to survive a redeploy.** Without these the app silently falls back to a local file, which Render's free tier doesn't persist across deploys — see BUILD_LOG Phase 10 for the full reasoning.
+
+**Known rough edge:** Render's free web services spin down after 15 minutes of no traffic and take roughly a minute to wake back up on the next request. The very first sign-in attempt after a quiet period will feel slow — not broken, just cold. There's no fix for this on the free tier short of a paid "always-on" plan.
 
 **Health check** — `GET /api/health` returns `{"ok": true}`.
 
