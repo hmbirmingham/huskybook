@@ -4,6 +4,7 @@ import { useAuth } from '../lib/AuthContext.jsx';
 const NAV_ITEMS = [
   { to: '/', label: 'Find a Service', end: true },
   { to: '/list', label: 'List Yourself' },
+  { to: '/my-listings', label: 'My Listings' },
   { to: '/my-requests', label: 'My Requests' },
   { to: '/manage', label: 'Manage Requests' },
 ];

@@ -122,6 +122,108 @@ providersRouter.post(
   })
 );
 
+// Edit one of your own listings. Ownership is checked against the
+// session, same pattern as everywhere else in this file — never trust a
+// provider id alone. Partial update: only fields present in the body are
+// changed, so the client can send just what the edit form touched.
+providersRouter.patch(
+  '/:id',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const existingResult = await db.execute({
+      sql: 'SELECT * FROM providers WHERE id = ?',
+      args: [req.params.id],
+    });
+    const existing = existingResult.rows[0];
+    if (!existing) {
+      return res.status(404).json({ error: 'Provider not found' });
+    }
+    if (existing.owner_user_id !== req.user.id) {
+      return res.status(403).json({ error: 'You do not own this listing' });
+    }
+
+    const {
+      name,
+      category,
+      type,
+      buildingZone,
+      exactLocation,
+      contactMethod,
+      specialties,
+      priceRange,
+      available,
+    } = req.body;
+
+    if (category !== undefined && !CATEGORIES.includes(category)) {
+      return res.status(400).json({ error: `category must be one of: ${CATEGORIES.join(', ')}` });
+    }
+    if (type !== undefined && !TYPES.includes(type)) {
+      return res.status(400).json({ error: `type must be one of: ${TYPES.join(', ')}` });
+    }
+
+    // Build the SET clause from only the fields the caller actually sent,
+    // so e.g. toggling "available" doesn't require resending every field.
+    const fields = {
+      name,
+      category,
+      type,
+      building_zone: buildingZone,
+      exact_location: exactLocation,
+      contact_method: contactMethod,
+      specialties: specialties !== undefined ? JSON.stringify(specialties) : undefined,
+      price_range: priceRange,
+      available: available !== undefined ? (available ? 1 : 0) : undefined,
+    };
+    const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
+    if (entries.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    await db.execute({
+      sql: `UPDATE providers SET ${entries.map(([k]) => `${k} = ?`).join(', ')} WHERE id = ?`,
+      args: [...entries.map(([, v]) => v), req.params.id],
+    });
+
+    const updatedResult = await db.execute({
+      sql: 'SELECT * FROM providers WHERE id = ?',
+      args: [req.params.id],
+    });
+    res.json(toOwnerProvider(updatedResult.rows[0]));
+  })
+);
+
+// Take down one of your own listings. Requests sent to it are removed in
+// the same transaction (via db.batch) rather than left dangling — a
+// request pointing at a deleted provider_id would break the "join to
+// providers" queries elsewhere (e.g. requests.js's REQUEST_WITH_PROVIDER_SQL).
+providersRouter.delete(
+  '/:id',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const existingResult = await db.execute({
+      sql: 'SELECT * FROM providers WHERE id = ?',
+      args: [req.params.id],
+    });
+    const existing = existingResult.rows[0];
+    if (!existing) {
+      return res.status(404).json({ error: 'Provider not found' });
+    }
+    if (existing.owner_user_id !== req.user.id) {
+      return res.status(403).json({ error: 'You do not own this listing' });
+    }
+
+    await db.batch(
+      [
+        { sql: 'DELETE FROM requests WHERE provider_id = ?', args: [req.params.id] },
+        { sql: 'DELETE FROM providers WHERE id = ?', args: [req.params.id] },
+      ],
+      'write'
+    );
+
+    res.json({ ok: true });
+  })
+);
+
 // Incoming requests for one provider's listing — now actually checks that
 // the caller owns it, closing the gap flagged since Phase 1: this used to
 // be provider_id in, matching data out, with nothing verifying the two
