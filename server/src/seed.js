@@ -9,15 +9,9 @@
 // listing you actually own.
 import { db } from './db/index.js';
 
-db.exec('DELETE FROM requests');
-db.exec('DELETE FROM providers');
-db.exec("DELETE FROM sqlite_sequence WHERE name IN ('requests', 'providers')");
-
-const insertProvider = db.prepare(`
-  INSERT INTO providers
-    (name, category, type, building_zone, exact_location, specialties, price_range, contact_method, available, verified)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`);
+await db.execute('DELETE FROM requests');
+await db.execute('DELETE FROM providers');
+await db.execute("DELETE FROM sqlite_sequence WHERE name IN ('requests', 'providers')");
 
 const providers = [
   ['Marcus T.', 'hair', 'dorm', 'Buckley Hall', 'Room 214', ['fades', 'line-ups', 'beard trims'], '$15-25', '@marcuscuts on Instagram', 1, 1],
@@ -29,18 +23,26 @@ const providers = [
   ['Nia C.', 'nails', 'mobile', 'Off-campus (Storrs Center)', '—', ['dip powder', 'nail repair'], '$20-40', '@niasnails', 1, 0],
 ];
 
-const insertedIds = providers.map(([name, category, type, buildingZone, exactLocation, specialties, priceRange, contactMethod, available, verified]) =>
-  insertProvider.run(name, category, type, buildingZone, exactLocation, JSON.stringify(specialties), priceRange, contactMethod, available, verified)
-    .lastInsertRowid
-);
+const insertedIds = [];
+for (const [name, category, type, buildingZone, exactLocation, specialties, priceRange, contactMethod, available, verified] of providers) {
+  const result = await db.execute({
+    sql: `INSERT INTO providers
+            (name, category, type, building_zone, exact_location, specialties, price_range, contact_method, available, verified)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [name, category, type, buildingZone, exactLocation, JSON.stringify(specialties), priceRange, contactMethod, available, verified],
+  });
+  insertedIds.push(Number(result.lastInsertRowid));
+}
 
-const insertRequest = db.prepare(`
-  INSERT INTO requests (provider_id, requester_name, note, status)
-  VALUES (?, ?, ?, ?)
-`);
+async function insertRequest(providerId, requesterName, note, status) {
+  await db.execute({
+    sql: 'INSERT INTO requests (provider_id, requester_name, note, status) VALUES (?, ?, ?, ?)',
+    args: [providerId, requesterName, note, status],
+  });
+}
 
-insertRequest.run(insertedIds[0], 'Chris P.', 'Looking for a mid fade, free Thursday afternoon?', 'pending');
-insertRequest.run(insertedIds[0], 'Taylor M.', 'Can you do a skin fade + line-up this weekend?', 'accepted');
-insertRequest.run(insertedIds[1], 'Riley B.', 'Interested in gel-x, any color, this Saturday', 'declined');
+await insertRequest(insertedIds[0], 'Chris P.', 'Looking for a mid fade, free Thursday afternoon?', 'pending');
+await insertRequest(insertedIds[0], 'Taylor M.', 'Can you do a skin fade + line-up this weekend?', 'accepted');
+await insertRequest(insertedIds[1], 'Riley B.', 'Interested in gel-x, any color, this Saturday', 'declined');
 
 console.log(`Seeded ${providers.length} providers and 3 sample requests.`);
