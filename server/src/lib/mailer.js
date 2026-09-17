@@ -12,6 +12,15 @@ const IS_DEV = process.env.NODE_ENV !== 'production';
 // landed in spam rather than the inbox.
 const FROM_ADDRESS = 'HuskyBook <hello@huskybook.hmbirmingham.me>';
 
+// A real reply address, not the account owner's personal inbox directly —
+// a Reply-To header is always visible to the recipient, so the owner's own
+// email can't go here without disclosing it. This alias forwards to the
+// owner's inbox via Cloudflare Email Routing (DNS is already on Cloudflare
+// for this domain) — see BUILD_LOG for the one-time setup. Genuinely
+// replyable mail is also a real deliverability signal: it reads as
+// correspondence from a person rather than fire-and-forget automated mail.
+const REPLY_TO_ADDRESS = 'feedback@huskybook.hmbirmingham.me';
+
 // Constructed lazily, on first real send, rather than at module load. The
 // Resend constructor throws synchronously if RESEND_API_KEY is missing —
 // building it eagerly at import time meant the *entire server* failed to
@@ -31,12 +40,22 @@ function getResendClient() {
 // once both the sign-in email and the two notification emails needed the
 // exact same "log in dev, send for real otherwise" behavior — three copies
 // of the same branch would've been one to keep in sync by hand.
-async function sendEmail({ to, subject, html, devLabel }) {
+//
+// Every send carries a `text` part alongside `html` now — an HTML-only
+// body is a real (if minor) spam-filter signal, and Resend's SDK accepts
+// both on the same call. Domain/DKIM/SPF/DMARC were all confirmed correct
+// (see BUILD_LOG) before making this change, so this addresses one real
+// contributing factor rather than the main one: a brand-new sending
+// subdomain has no reputation yet, and per Resend's own deliverability
+// docs that's mostly a matter of consistent legitimate sending and
+// recipient engagement (opens, not marking as spam) over time, not a
+// config fix.
+async function sendEmail({ to, subject, html, text, devLabel }) {
   if (IS_DEV) {
     console.log(`\n[mailer] ${devLabel}\n`);
     return;
   }
-  await getResendClient().emails.send({ from: FROM_ADDRESS, to, subject, html });
+  await getResendClient().emails.send({ from: FROM_ADDRESS, to, subject, html, text, replyTo: REPLY_TO_ADDRESS });
 }
 
 export async function sendMagicLinkEmail(email, url) {
@@ -49,6 +68,7 @@ export async function sendMagicLinkEmail(email, url) {
       <p><a href="${url}">Sign in to HuskyBook</a></p>
       <p>If you didn't request this, ignore this email.</p>
     `,
+    text: `Hi,\n\nClick the link below to sign in to HuskyBook. This link expires in 15 minutes and can only be used once.\n\n${url}\n\nIf you didn't request this, ignore this email.`,
     devLabel: `Sign-in link for ${email}:\n  ${url}`,
   });
 }
@@ -62,19 +82,22 @@ export async function sendRequestNotification(providerEmail, requesterName, list
       <p><strong>${requesterName}</strong> just requested your listing "${listingName}" on HuskyBook.</p>
       <p>Open Manage Requests in the app to accept or decline.</p>
     `,
+    text: `Hi,\n\n${requesterName} just requested your listing "${listingName}" on HuskyBook.\n\nOpen Manage Requests in the app to accept or decline.`,
     devLabel: `New request for ${providerEmail}: ${requesterName} requested "${listingName}"`,
   });
 }
 
 export async function sendRequestStatusUpdate(requesterEmail, status, listingName) {
+  const acceptedLine = "Check My Requests in the app for the provider's location and contact info.";
   await sendEmail({
     to: requesterEmail,
     subject: `Your request was ${status}`,
     html: `
       <p>Hi,</p>
       <p>Your request for "${listingName}" on HuskyBook was <strong>${status}</strong>.</p>
-      ${status === 'accepted' ? "<p>Check My Requests in the app for the provider's location and contact info.</p>" : ''}
+      ${status === 'accepted' ? `<p>${acceptedLine}</p>` : ''}
     `,
+    text: `Hi,\n\nYour request for "${listingName}" on HuskyBook was ${status}.${status === 'accepted' ? `\n\n${acceptedLine}` : ''}`,
     devLabel: `Status update for ${requesterEmail}: "${listingName}" was ${status}`,
   });
 }
