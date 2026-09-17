@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchMyRequests } from '../lib/api.js';
+import { fetchMyRequests, deleteRequest } from '../lib/api.js';
 import { categoryLabel } from '../lib/constants.js';
 import Badge from '../components/Badge.jsx';
 import { usePageTitle } from '../lib/usePageTitle.js';
@@ -30,6 +30,7 @@ function MyRequestsList() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +49,16 @@ function MyRequestsList() {
     };
   }, []);
 
+  async function handleWithdraw(id) {
+    setActionError('');
+    try {
+      await deleteRequest(id);
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      setActionError(err.message);
+    }
+  }
+
   if (loading) return <p className="text-ink-soft">Loading…</p>;
   if (error) return <p className="font-medium text-rust">{error}</p>;
   if (requests.length === 0) {
@@ -60,6 +71,7 @@ function MyRequestsList() {
 
   return (
     <div className="flex flex-col gap-4">
+      {actionError && <p className="font-medium text-rust">{actionError}</p>}
       {requests.map((r) => (
         <article key={r.id} className="border-2 border-ink/20 bg-[#fbf5e6] p-4">
           <div className="flex items-start justify-between gap-3">
@@ -73,6 +85,16 @@ function MyRequestsList() {
           </div>
 
           {r.note && <p className="mt-2 text-sm italic text-ink-soft">"{r.note}"</p>}
+
+          {r.status === 'pending' && (
+            <button
+              type="button"
+              onClick={() => handleWithdraw(r.id)}
+              className="mt-3 border-2 border-ink/30 px-4 py-2 text-sm font-semibold text-ink-soft hover:border-ink hover:text-ink"
+            >
+              Withdraw
+            </button>
+          )}
 
           {r.status === 'accepted' && (
             <div className="mt-3 border-t border-dashed border-ink/25 pt-3 text-sm">
