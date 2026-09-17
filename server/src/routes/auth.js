@@ -14,7 +14,10 @@ import { requireAuth } from '../middleware/auth.js';
 
 export const authRouter = Router();
 
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+// BASE_URL is the app's own public origin — in production this is the one
+// Railway URL serving both the API and the built client (see index.js);
+// in dev it's Vite's dev server, which proxies /api back to this process.
+const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
 const IS_DEV = process.env.NODE_ENV !== 'production';
 
 const SESSION_COOKIE_OPTIONS = {
@@ -35,7 +38,7 @@ authRouter.post('/request-link', async (req, res) => {
   const response = { ok: true };
 
   if (rawToken) {
-    const url = `${CLIENT_ORIGIN}/verify?token=${rawToken}`;
+    const url = `${BASE_URL}/verify?token=${rawToken}`;
     await sendMagicLinkEmail(email.trim().toLowerCase(), url);
     // Dev convenience only. A real deployment must never hand the sign-in
     // link back in the API response — that defeats the entire point of a
