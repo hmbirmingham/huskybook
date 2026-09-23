@@ -33,7 +33,7 @@ body {
 }
 
 /* Flat, hard-edged "pinned flyer" shadow instead of a soft blurred SaaS
-   drop-shadow — no blur radius, a fixed offset, low opacity. */
+   drop-shadow, no blur radius, a fixed offset, low opacity. */
 .shadow-pin {
   box-shadow: 4px 4px 0 rgba(20, 40, 80, 0.14);
 }

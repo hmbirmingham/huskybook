@@ -1,5 +1,5 @@
 // Express 4 doesn't catch a rejected promise from an async handler on its
-// own — an unhandled rejection there just hangs the request. Wrapping every
+// own: an unhandled rejection there just hangs the request. Wrapping every
 // async route in this instead of repeating try/catch { next(err) } in each
 // one; the existing error-handling middleware in index.js takes it from
 // here.

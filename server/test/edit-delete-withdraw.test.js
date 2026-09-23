@@ -1,6 +1,6 @@
 // Covers PR #16's edit/delete for listings and withdraw for pending
 // requests (server/src/routes/providers.js PATCH/DELETE '/:id',
-// server/src/routes/requests.js DELETE '/:id') — these shipped without
+// server/src/routes/requests.js DELETE '/:id'). These shipped without
 // their own test coverage, and the existing suites predate them.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';

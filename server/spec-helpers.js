@@ -10,7 +10,7 @@ import path from 'node:path';
 
 // Each call gets its own throwaway sqlite file via DATABASE_URL (see
 // server/src/db/index.js) so tests never touch the real dev database and
-// don't interfere with each other — node --test runs each *.test.js file
+// don't interfere with each other: node --test runs each *.test.js file
 // in its own process by default, so setting this per-file env var here is
 // safe even though db/index.js's client is a module-level singleton.
 export async function startTestApp() {
@@ -38,7 +38,7 @@ export function uniqueEmail(prefix) {
   return `${prefix}-${crypto.randomUUID()}@uconn.edu`;
 }
 
-// Thin JSON fetch wrapper — every route in this app speaks JSON in and out,
+// Thin JSON fetch wrapper. Every route in this app speaks JSON in and out,
 // so this is the one shape every test needs instead of repeating
 // fetch/headers/JSON.parse boilerplate at every call site.
 export async function api(baseUrl, method, urlPath, { body, cookie } = {}) {
@@ -56,7 +56,7 @@ export async function api(baseUrl, method, urlPath, { body, cookie } = {}) {
 }
 
 // Drives the actual magic-link flow (request-link -> devLoginUrl -> verify)
-// rather than inserting a session row directly — the point of these tests
+// rather than inserting a session row directly. The point of these tests
 // is to exercise the real auth seam, not a shortcut around it.
 export async function signIn(baseUrl, email, displayName) {
   const link = await api(baseUrl, 'POST', '/api/auth/request-link', { body: { email } });

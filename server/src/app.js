@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // Split from index.js's app.listen() so the app itself can be imported
-// without binding a port — the test suite does exactly this, driving real
+// without binding a port. The test suite does exactly this, driving real
 // HTTP requests against an ephemeral port instead of a fixed one.
 export const app = express();
 
@@ -28,7 +28,7 @@ app.use('/api/providers', providersRouter);
 app.use('/api/requests', requestsRouter);
 
 // In dev, Vite's own server handles the client (proxying /api back to
-// here — see client/vite.config.js). In production there's no separate
+// here, see client/vite.config.js). In production there's no separate
 // Vite server, so this process serves the client's build output itself:
 // one service, one URL, rather than standing up a second static
 // host. The client is a single-page app, so any non-API path that isn't

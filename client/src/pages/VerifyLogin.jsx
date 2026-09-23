@@ -17,7 +17,7 @@ export default function VerifyLogin() {
 
   // A login token is single-use server-side, but React 18 StrictMode
   // double-invokes effects in dev (mount → unmount → mount) specifically to
-  // surface non-idempotent side effects like this one — without this guard,
+  // surface non-idempotent side effects like this one. Without this guard,
   // the second invocation would consume an already-used token and fail.
   const verifyStarted = useRef(false);
 
@@ -42,7 +42,7 @@ export default function VerifyLogin() {
         setState('error');
         setError(err.message);
       });
-    // Runs once for the token in the URL — verify/navigate are stable
+    // Runs once for the token in the URL: verify/navigate are stable
     // useCallback references from AuthContext, not deps that should re-fire this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);

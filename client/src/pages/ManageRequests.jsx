@@ -26,7 +26,7 @@ export default function ManageRequests() {
 function ManageRequestsPanel() {
   // Listings come straight from the server now (GET /providers/mine, scoped
   // to the session) instead of a client-side list of ids the browser had to
-  // remember — so there's no "this listing no longer exists" state to
+  // remember, so there's no "this listing no longer exists" state to
   // handle anymore. If it's gone server-side, it's just not in this list.
   const [listings, setListings] = useState(null);
   const [activeListingId, setActiveListingId] = useState(null);

@@ -1,6 +1,6 @@
 import { SESSION_COOKIE, getUserBySession } from '../lib/auth.js';
 
-// Hand-rolled instead of adding cookie-parser for one cookie — Express's
+// Hand-rolled instead of adding cookie-parser for one cookie. Express's
 // res.cookie() already works with no extra dependency, this is just the
 // read side.
 function parseCookies(header = '') {
@@ -14,10 +14,10 @@ function parseCookies(header = '') {
   return out;
 }
 
-// Runs on every request and attaches req.user (or null) — cheap enough that
+// Runs on every request and attaches req.user (or null), cheap enough that
 // routes never have to remember to opt in before reading it. Wrapped in its
 // own try/catch (rather than the shared asyncHandler) since this isn't a
-// route — Express 4 won't forward a rejected promise from middleware to
+// route. Express 4 won't forward a rejected promise from middleware to
 // next() automatically either.
 export async function attachUser(req, res, next) {
   try {
