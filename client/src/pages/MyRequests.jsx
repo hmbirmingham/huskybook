@@ -64,7 +64,7 @@ function MyRequestsList() {
   if (requests.length === 0) {
     return (
       <p className="text-ink-soft">
-        No requests sent as {user.displayName} yet — head to Find a Service to send one.
+        No requests sent as {user.displayName} yet. Head to Find a Service to send one.
       </p>
     );
   }

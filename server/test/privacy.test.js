@@ -2,7 +2,7 @@
 // and contact_method never reach anyone but the listing's own owner until
 // a specific request against it has been accepted. Flagged twice in
 // BUILD_LOG as logic that deserved regression tests instead of repeated
-// manual curl/browser checks — this is that coverage.
+// manual curl/browser checks. This is that coverage.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { startTestApp, stopTestApp, api, signIn, createListing, uniqueEmail } from '../spec-helpers.js';
@@ -69,7 +69,7 @@ test('a pending request hides the location; accepting it unlocks the location fo
   assert.equal(unlocked.provider.contactMethod, 'text 555-0100');
 
   // A second, unrelated account never had a request accepted against this
-  // listing — it should never see the location no matter what happened to
+  // listing. It should never see the location no matter what happened to
   // someone else's request.
   const mineForBystander = await api(baseUrl, 'GET', '/api/requests/mine', { cookie: bystander.cookie });
   assert.equal(mineForBystander.json.length, 0);

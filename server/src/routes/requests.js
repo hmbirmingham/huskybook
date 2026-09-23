@@ -4,7 +4,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { sendRequestNotification, sendRequestStatusUpdate } from '../lib/mailer.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 
-// Email delivery never blocks or fails a request/response cycle — a flaky
+// Email delivery never blocks or fails a request/response cycle, a flaky
 // mail provider shouldn't be able to break the actual feature (submitting
 // or accepting a request). Errors are logged, not surfaced to the client.
 function notify(promise) {
@@ -38,7 +38,7 @@ async function fetchRequestForRequester(id) {
 
 // Submit a request to a provider. Starts pending; the provider has to
 // accept before the requester learns anything private about them. The
-// requester's identity comes entirely from the session now — requesterName
+// requester's identity comes entirely from the session now: requesterName
 // is the account's display_name, not a value the client gets to supply,
 // which closes the old "type any name" gap.
 requestsRouter.post(
@@ -75,7 +75,7 @@ requestsRouter.post(
     res.status(201).json(serializeForRequester(row));
 
     // Seed/demo listings have no owner_user_id (see seed.js) and so no email
-    // to notify — nothing to send in that case, not an error.
+    // to notify, nothing to send in that case, not an error.
     if (provider.owner_email) {
       notify(sendRequestNotification(provider.owner_email, req.user.display_name, provider.name));
     }
@@ -83,11 +83,11 @@ requestsRouter.post(
 );
 
 // The signed-in user's own sent requests. Filtered by requester_user_id,
-// not by a name string a client could supply for anyone — this used to be
+// not by a name string a client could supply for anyone. This used to be
 // GET /?requesterName=, which meant anyone could read anyone's requests by
 // typing their name. This is the one place the private provider fields
 // (exact_location, contact_method) are ever sent to a requester, and only
-// for requests that are specifically `accepted` — that filtering happens
+// for requests that are specifically `accepted`. That filtering happens
 // in the SQL below, not as an afterthought in the response shape.
 requestsRouter.get(
   '/mine',
@@ -102,11 +102,11 @@ requestsRouter.get(
   })
 );
 
-// Accept or decline. This is the moment the location unlocks — it's a side
+// Accept or decline. This is the moment the location unlocks. It's a side
 // effect of the status flip, not a separate action, so there's no window
 // where a request is "accepted" but the location hasn't caught up.
 // Ownership is now checked against the session, not a client-supplied
-// providerId — the old version trusted whatever id the client sent along.
+// providerId. The old version trusted whatever id the client sent along.
 requestsRouter.patch(
   '/:id',
   requireAuth,
@@ -162,7 +162,7 @@ requestsRouter.patch(
 );
 
 // Withdraw a request you sent. Restricted to your own requests, and only
-// while still pending — once a provider has acted on it (accepted/
+// while still pending, once a provider has acted on it (accepted/
 // declined), that's now their record too, so it's left alone rather than
 // disappearing out from under them.
 requestsRouter.delete(

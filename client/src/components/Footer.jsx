@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="mx-auto max-w-5xl px-5 py-6 text-sm text-ink-soft">
         <p>
           HuskyBook is a listing board, not a licensed service provider. Nobody here is vetted,
-          licensed, or insured by HuskyBook — arranging and receiving a service is between the
+          licensed, or insured by HuskyBook. Arranging and receiving a service is between the
           two students involved, same as if you'd found each other through a flyer on a dorm
           corkboard.
         </p>

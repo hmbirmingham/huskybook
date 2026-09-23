@@ -44,8 +44,7 @@ export default function RequestModal({ provider, onClose, onSubmitted }) {
 
         <p className="mt-2 text-sm text-ink-soft">
           {provider.name}'s exact location and contact info stay private until they accept.
-          They'll see this request as{' '}
-          <span className="font-semibold">{user.displayName}</span>.
+          They'll see <span className="font-semibold">{user.displayName}</span> as the requester.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">

@@ -25,7 +25,7 @@ export function createProvider(payload) {
   return request('/providers', { method: 'POST', body: JSON.stringify(payload) });
 }
 
-// The signed-in account's own listings — server derives "mine" from the
+// The signed-in account's own listings. The server derives "mine" from the
 // session, not from anything the client tracks itself.
 export function fetchMyProviders() {
   return request('/providers/mine');

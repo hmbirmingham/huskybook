@@ -1,7 +1,7 @@
 // Central place for what a provider row is allowed to reveal, and to whom.
-// The privacy rule that matters for this app — never expose exact_location
+// The privacy rule that matters for this app, never expose exact_location
 // or contact_method except to a requester whose specific request has been
-// accepted — is enforced here and only here, so no route can leak it by
+// accepted, is enforced here and only here, so no route can leak it by
 // forgetting to strip a field.
 export function toPublicProvider(row) {
   return {
