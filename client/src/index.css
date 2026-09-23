@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Warm paper + ink, not a generic AI cream/terracotta pairing — see
+  /* Warm paper + ink, not the usual cream/terracotta pairing. See
      BUILD_LOG "design pass" for the full reasoning. */
   --color-paper: #f2ead7;
   --color-paper-dark: #e6dabd;
