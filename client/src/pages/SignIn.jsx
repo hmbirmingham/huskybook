@@ -34,7 +34,7 @@ export default function SignIn() {
       <h1 className="font-display text-3xl font-semibold text-ink">Sign in</h1>
       <p className="mt-2 text-ink-soft">
         Enter your <span className="font-semibold">@uconn.edu</span> email and we'll send you a
-        link to sign in — no password to remember.
+        link to sign in, no password to remember.
       </p>
 
       {status === 'sent' ? (
@@ -42,7 +42,7 @@ export default function SignIn() {
           <p>Check your inbox at {email} for a sign-in link. It's valid for 15 minutes.</p>
           {devLoginUrl && (
             <p className="mt-3 border-t border-dashed border-pine/40 pt-3 text-xs">
-              <span className="font-semibold uppercase tracking-wide">Dev mode only</span> — no
+              <span className="font-semibold uppercase tracking-wide">Dev mode only</span>: no
               real email is configured, so here's the link a real inbox would have received:{' '}
               <a href={devLoginUrl} className="font-semibold underline">
                 open sign-in link

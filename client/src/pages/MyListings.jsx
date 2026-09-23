@@ -207,7 +207,7 @@ function EditListingForm({ listing, onCancel, onSaved }) {
       </label>
 
       <label className={labelClasses}>
-        Exact location <span className={hintClasses}>private — only shown after you accept a request</span>
+        Exact location <span className={hintClasses}>private, only shown after you accept a request</span>
         <input
           type="text"
           value={form.exactLocation}

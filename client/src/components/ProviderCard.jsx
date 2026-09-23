@@ -19,7 +19,7 @@ export default function ProviderCard({ provider, onRequest }) {
         {provider.available ? (
           <Badge tone="pine">Available</Badge>
         ) : (
-          <Badge tone="outline">Not taking cuts</Badge>
+          <Badge tone="outline">Not taking clients</Badge>
         )}
       </div>
 

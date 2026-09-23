@@ -22,7 +22,7 @@ function isoIn(ms) {
 }
 
 // Returns null (not an error) when a still-valid link was already issued
-// recently — the caller returns the same {ok:true} either way, so a client
+// recently. The caller returns the same {ok:true} either way, so a client
 // can't use response timing/shape to tell "you just spammed this" apart
 // from "link sent."
 export async function createLoginToken(email) {
@@ -45,7 +45,7 @@ export async function createLoginToken(email) {
 }
 
 // Marks the token used and returns the user it belongs to (creating the
-// user row on first sign-in) — or null if the token is unknown, already
+// user row on first sign-in), or null if the token is unknown, already
 // used, or expired. Only the hash is ever looked up; the raw token exists
 // only in the URL that got emailed.
 export async function consumeLoginToken(rawToken) {

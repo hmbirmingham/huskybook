@@ -26,7 +26,7 @@ export default function Header() {
             HuskyBook<span className="text-amber">.</span>
           </p>
           <p className="mt-1 text-sm text-ink-soft">
-            Student-run hair, nails, makeup &amp; braids — posted by whoever's around.
+            Student-run hair, nails, makeup &amp; braids, posted by whoever's around.
           </p>
         </div>
 

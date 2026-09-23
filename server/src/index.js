@@ -6,7 +6,7 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 app.listen(PORT, () => {
   console.log(`HuskyBook API listening on http://localhost:${PORT}`);
   if (IS_PRODUCTION) {
-    // Temporary boot-time diagnostic — never logs actual secret values,
+    // Temporary boot-time diagnostic, never logs actual secret values,
     // only presence/prefix, safe for a server log. Added to debug a
     // deployed instance reporting "missing API key" from Resend despite
     // the dashboard showing RESEND_API_KEY as set; remove once resolved.
