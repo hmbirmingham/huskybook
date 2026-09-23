@@ -15,7 +15,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 
 export const authRouter = Router();
 
-// BASE_URL is the app's own public origin — in production this is the one
+// BASE_URL is the app's own public origin. In production this is the one
 // deployed URL serving both the API and the built client (see index.js);
 // in dev it's Vite's dev server, which proxies /api back to this process.
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
@@ -44,12 +44,12 @@ authRouter.post(
       const url = `${BASE_URL}/verify?token=${rawToken}`;
       await sendMagicLinkEmail(email.trim().toLowerCase(), url);
       // Dev convenience only. A real deployment must never hand the sign-in
-      // link back in the API response — that defeats the entire point of a
+      // link back in the API response. That defeats the entire point of a
       // magic link, which is that only the inbox owner can see it.
       if (IS_DEV) response.devLoginUrl = url;
     }
     // Same {ok:true} shape whether a token was actually issued or the request
-    // hit the per-email cooldown — nothing in the response should let a
+    // hit the per-email cooldown. Nothing in the response should let a
     // caller distinguish "spammed" from "sent."
 
     res.json(response);

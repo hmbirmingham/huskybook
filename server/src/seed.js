@@ -1,9 +1,9 @@
 // Wipes and repopulates the two tables with sample data so the app has
-// something to look at on first run. Safe to re-run any time — it's a
+// something to look at on first run. Safe to re-run any time, it's a
 // reset, not a migration.
 //
 // Seeded providers are intentionally unclaimed (owner_user_id stays NULL,
-// since no real account created them) — they're there to make the
+// since no real account created them), they're there to make the
 // directory look populated, not to be managed. Sign in and list yourself
 // fresh to test the provider-side flows (Manage Requests, etc.) against a
 // listing you actually own.
@@ -16,11 +16,11 @@ await db.execute("DELETE FROM sqlite_sequence WHERE name IN ('requests', 'provid
 const providers = [
   ['Marcus T.', 'hair', 'dorm', 'Buckley Hall', 'Room 214', ['fades', 'line-ups', 'beard trims'], '$15-25', '@marcuscuts on Instagram', 1, 1],
   ['Priya S.', 'nails', 'dorm', 'Shippee Hall', 'Room 118', ['gel-x', 'nail art', 'acrylics'], '$25-45', 'text (860) 555-0134', 1, 0],
-  ['Jordan K.', 'hair', 'mobile', 'North Campus', '—', ['tapers', 'braids', 'kids cuts'], '$20-30', '@jordankutz', 1, 1],
+  ['Jordan K.', 'hair', 'mobile', 'North Campus', 'Travels to you', ['tapers', 'braids', 'kids cuts'], '$20-30', '@jordankutz', 1, 1],
   ['Ava R.', 'makeup', 'dorm', 'Towers', 'Room 305B', ['soft glam', 'editorial', 'bridal trial'], '$40-80', 'text (860) 555-0198', 0, 0],
-  ['Deja W.', 'braids', 'mobile', 'South Campus', '—', ['knotless braids', 'cornrows', 'twists'], '$60-120', '@braidsbydeja', 1, 1],
+  ['Deja W.', 'braids', 'mobile', 'South Campus', 'Travels to you', ['knotless braids', 'cornrows', 'twists'], '$60-120', '@braidsbydeja', 1, 1],
   ['Sam L.', 'hair', 'dorm', 'Alumni Quad', 'Room 402', ['buzz cuts', 'skin fades'], '$10-20', 'text (860) 555-0177', 1, 0],
-  ['Nia C.', 'nails', 'mobile', 'Off-campus (Storrs Center)', '—', ['dip powder', 'nail repair'], '$20-40', '@niasnails', 1, 0],
+  ['Nia C.', 'nails', 'mobile', 'Off-campus (Storrs Center)', 'Travels to you', ['dip powder', 'nail repair'], '$20-40', '@niasnails', 1, 0],
 ];
 
 const insertedIds = [];

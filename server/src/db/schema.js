@@ -1,5 +1,5 @@
 // Schema is applied with CREATE TABLE IF NOT EXISTS on every boot instead of
-// a migration runner — there's exactly one schema version right now, and a
+// a migration runner: there's exactly one schema version right now, and a
 // migration tool would be overhead with nothing to migrate between. If this
 // grows past one or two shapes, reach for a real migration tool before
 // hand-rolling versioning here.
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 `;
 
-// SQLite's ALTER TABLE has no "ADD COLUMN IF NOT EXISTS" — so unlike
+// SQLite's ALTER TABLE has no "ADD COLUMN IF NOT EXISTS", so unlike
 // everything above, these two columns (added after providers/requests
 // already existed with seed data in them) need an actual imperative check
 // against PRAGMA table_info before altering. This is the first real schema

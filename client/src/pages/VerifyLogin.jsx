@@ -17,7 +17,7 @@ export default function VerifyLogin() {
 
   // A login token is single-use server-side, but React 18 StrictMode
   // double-invokes effects in dev (mount → unmount → mount) specifically to
-  // surface non-idempotent side effects like this one — without this guard,
+  // surface non-idempotent side effects like this one. Without this guard,
   // the second invocation would consume an already-used token and fail.
   const verifyStarted = useRef(false);
 
@@ -42,7 +42,7 @@ export default function VerifyLogin() {
         setState('error');
         setError(err.message);
       });
-    // Runs once for the token in the URL — verify/navigate are stable
+    // Runs once for the token in the URL: verify/navigate are stable
     // useCallback references from AuthContext, not deps that should re-fire this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -89,8 +89,8 @@ export default function VerifyLogin() {
     <div className="mx-auto max-w-md px-5 py-8">
       <h1 className="font-display text-3xl font-semibold text-ink">One more thing</h1>
       <p className="mt-2 text-ink-soft">
-        What name should providers and requesters see for you? This is separate from your email —
-        a first name and last initial is plenty if you'd rather not share your full name.
+        What name should providers and requesters see for you? This is separate from your email.
+        A first name and last initial is plenty if you'd rather not share your full name.
       </p>
       <form onSubmit={handleSaveName} className="mt-6 flex flex-col gap-4">
         <input

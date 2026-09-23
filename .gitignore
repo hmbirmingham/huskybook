@@ -6,8 +6,7 @@ dist/
 .DS_Store
 demo.html
 
-# Session handoff docs / checkpoint notes — process artifacts, not part of
-# the app or its history.
+# Local working notes, not part of the app or its history.
 dev-notes/
 
 # SQLite database + WAL files (generated, not committed)

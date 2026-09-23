@@ -17,7 +17,7 @@ export default function ListYourself() {
       <h1 className="font-display text-3xl font-semibold text-ink">List yourself</h1>
       <p className="mt-2 text-ink-soft">
         Your building/zone shows up on the directory. Your exact room number and contact info stay
-        private — they're only revealed to a requester once you accept their request.
+        private, they're only revealed to a requester once you accept their request.
       </p>
       <div className="mt-6">
         <RequireSignIn prompt="Sign in to list yourself as a provider.">
@@ -76,8 +76,8 @@ function ListYourselfForm() {
       <div>
         <p className="border-2 border-pine bg-pine/10 px-4 py-3 text-sm font-medium text-pine-dark">
           {listing.name} is now on the directory under {listing.buildingZone}. Your exact location
-          ({listing.exactLocation}) and contact info stay private until you accept a request —
-          check <span className="font-semibold">Manage Requests</span> for anyone who reaches out.
+          ({listing.exactLocation}) and contact info stay private until you accept a request.
+          Check <span className="font-semibold">Manage Requests</span> for anyone who reaches out.
         </p>
         <button
           type="button"
@@ -93,7 +93,7 @@ function ListYourselfForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <label className={labelClasses}>
-        Name <span className={hintClasses}>shown on this listing — can differ from your account name</span>
+        Name <span className={hintClasses}>shown on this listing, can differ from your account name</span>
         <input
           type="text"
           value={form.name}
@@ -138,7 +138,7 @@ function ListYourselfForm() {
       </label>
 
       <label className={labelClasses}>
-        Exact location <span className={hintClasses}>private — only shown after you accept a request</span>
+        Exact location <span className={hintClasses}>private, only shown after you accept a request</span>
         <input
           type="text"
           value={form.exactLocation}

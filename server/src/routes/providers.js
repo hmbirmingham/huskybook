@@ -10,7 +10,7 @@ const CATEGORIES = ['hair', 'nails', 'makeup', 'braids', 'other'];
 const TYPES = ['dorm', 'mobile'];
 
 // Browse the directory. Deliberately public-fields-only, and deliberately
-// open to anyone signed in or not — this is the one endpoint that must
+// open to anyone signed in or not. This is the one endpoint that must
 // never carry exact_location or contact_method.
 providersRouter.get(
   '/',
@@ -48,7 +48,7 @@ providersRouter.get(
   })
 );
 
-// The signed-in user's own listings — owner view, since these are all
+// The signed-in user's own listings, owner view, since these are all
 // listings they themselves created. This replaces the old localStorage
 // bookkeeping in the client (client/src/lib/identity.js) with the actual
 // source of truth: whichever rows this account owns in the database.
@@ -64,7 +64,7 @@ providersRouter.get(
   })
 );
 
-// "List yourself" — create a provider listing, owned by the signed-in
+// "List yourself": create a provider listing, owned by the signed-in
 // account. Returns the owner view (including the private fields) since the
 // person who just submitted this form obviously already knows their own
 // room number and contact info.
@@ -123,7 +123,7 @@ providersRouter.post(
 );
 
 // Edit one of your own listings. Ownership is checked against the
-// session, same pattern as everywhere else in this file — never trust a
+// session, same pattern as everywhere else in this file. Never trust a
 // provider id alone. Partial update: only fields present in the body are
 // changed, so the client can send just what the edit form touched.
 providersRouter.patch(
@@ -193,7 +193,7 @@ providersRouter.patch(
 );
 
 // Take down one of your own listings. Requests sent to it are removed in
-// the same transaction (via db.batch) rather than left dangling — a
+// the same transaction (via db.batch) rather than left dangling, a
 // request pointing at a deleted provider_id would break the "join to
 // providers" queries elsewhere (e.g. requests.js's REQUEST_WITH_PROVIDER_SQL).
 providersRouter.delete(
@@ -224,7 +224,7 @@ providersRouter.delete(
   })
 );
 
-// Incoming requests for one provider's listing — now actually checks that
+// Incoming requests for one provider's listing, now actually checks that
 // the caller owns it, closing the gap flagged since Phase 1: this used to
 // be provider_id in, matching data out, with nothing verifying the two
 // were the same account.
