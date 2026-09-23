@@ -89,8 +89,8 @@ export default function VerifyLogin() {
     <div className="mx-auto max-w-md px-5 py-8">
       <h1 className="font-display text-3xl font-semibold text-ink">One more thing</h1>
       <p className="mt-2 text-ink-soft">
-        What name should providers and requesters see for you? This is separate from your email —
-        a first name and last initial is plenty if you'd rather not share your full name.
+        What name should providers and requesters see for you? This is separate from your email.
+        A first name and last initial is plenty if you'd rather not share your full name.
       </p>
       <form onSubmit={handleSaveName} className="mt-6 flex flex-col gap-4">
         <input

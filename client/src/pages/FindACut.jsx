@@ -99,7 +99,7 @@ export default function FindACut() {
       {loading && <p className="mt-8 text-ink-soft">Loading the directory…</p>}
       {error && <p className="mt-8 font-medium text-rust">{error}</p>}
       {!loading && !error && providers.length === 0 && (
-        <p className="mt-8 text-ink-soft">Nobody matches those filters yet — try widening them.</p>
+        <p className="mt-8 text-ink-soft">Nobody matches those filters yet. Try widening them.</p>
       )}
 
       <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -113,7 +113,7 @@ export default function FindACut() {
           provider={requesting}
           onClose={() => setRequesting(null)}
           onSubmitted={() => {
-            setConfirmation(`Request sent to ${requesting.name} — check "My Requests" for updates.`);
+            setConfirmation(`Request sent to ${requesting.name}, check "My Requests" for updates.`);
             setRequesting(null);
           }}
         />
