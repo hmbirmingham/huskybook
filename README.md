@@ -25,7 +25,7 @@ npm run seed
 
 ## Deployment
 
-Target host is [Render](https://render.com) — free web service tier, no card required. (`railway.toml` is still in the repo in case Railway access ever changes, but it isn't the maintained path; Fly.io was also considered and ruled out since it now requires a card even for its trial.)
+Target host is [Render](https://render.com), free web service tier, no card required. (Fly.io was also considered and ruled out since it now requires a card even for its trial.)
 
 **To deploy:** push this repo to GitHub (already done), then in Render's dashboard use "New > Blueprint" and point it at the repo — `render.yaml` at the root defines the service, so most of the setup happens automatically. Render will prompt for the environment variables marked `sync: false` in that file (see below) the first time the Blueprint is applied.
 
