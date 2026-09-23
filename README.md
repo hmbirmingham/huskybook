@@ -1,10 +1,45 @@
 # HuskyBook
 
+> **Archived September 2026. No longer maintained, and no longer deployed anywhere.** The code still runs locally, see Setup below. Nothing here is accepting real users.
+
 A peer-to-peer directory connecting UConn students who offer personal-care services (hair, nails, makeup, braids) with students looking to book one. Most providers here are informal: someone doing hair or nails out of a dorm room, or willing to travel to yours, not a licensed shop with fixed hours.
 
 Full write-up of how this was built, and the reasoning behind the decisions below, is in [BUILD_LOG.md](./BUILD_LOG.md).
 
 **Not affiliated with the University of Connecticut.** "Husky" is used here as a nod to the mascot, not an official UConn product.
+
+## Screenshots
+
+![The public directory, showing provider cards with building and zone but no exact location](docs/screenshots/find-a-service.png)
+
+The directory. Building and zone are public. Exact room numbers and contact details are not.
+
+![Sending a request, with a modal stating what stays private until the provider accepts](docs/screenshots/request-flow.png)
+
+Sending a request. The modal states the privacy rule before you commit to anything.
+
+![The provider side of Manage Requests, showing one pending request with accept and decline](docs/screenshots/manage-requests.png)
+
+The provider side. Accepting is the moment the exact location unlocks, and only for that one requester.
+
+## Why I stopped
+
+HuskyBook works. It just solves a problem neither side actually has.
+
+Unlicensed student providers already book through Instagram and group chats. That costs them nothing and reaches an audience they have already built. Licensed businesses already use real booking tools. A directory sitting between the two adds a step for everybody and removes one for nobody.
+
+Charging a fee would have made it worse, not better. It would have meant routing money for unlicensed services through a platform I run, which is a liability worth taking on only for a product people are actually asking for. Nobody was asking.
+
+So I stopped here instead of building features nobody needed.
+
+## What to look at
+
+If you are reading this as a code sample, these are the parts worth the time.
+
+- **The privacy invariant.** Exact location and contact info never leave the server until a specific request is accepted. It is enforced in exactly two places: the `CASE WHEN status = 'accepted'` in [`server/src/routes/requests.js`](server/src/routes/requests.js), and the serializers in [`server/src/lib/serialize.js`](server/src/lib/serialize.js). No route can leak those fields by forgetting to strip them, because they are never in the object to strip.
+- **The ownership checks.** Only the account that owns a listing can act on it, verified against the session rather than any id the client supplies. See [`server/src/routes/providers.js`](server/src/routes/providers.js) and [`server/src/routes/requests.js`](server/src/routes/requests.js).
+- **The tests.** [`server/test/`](server/test) covers both of those rules over real HTTP, driving a real magic-link sign-in rather than faking a session. `npm test` runs 32 of them.
+- **The deploy debugging.** [BUILD_LOG](./BUILD_LOG.md) phases 10 through 12: a host that turned out not to be free, a database that could not follow the app to a free host, and a build that failed on the first real deploy for a reason local testing structurally could not have caught.
 
 ## Setup
 
