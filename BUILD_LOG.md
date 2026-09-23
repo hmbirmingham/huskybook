@@ -253,30 +253,31 @@ Partway through this build (2026-09-16) I set myself a sprint plan targeting a N
 
 ---
 
-## What's next
+## Where it ended up
 
-**Fully built:** the four core flows from the spec end to end, against a real SQLite-compatible backend (libSQL — a local file in dev, Turso in production) that's actually deployable on a host that's free, sitting behind real `@uconn.edu` authentication, with real email delivery (Resend) for sign-in links and for request/accept notifications. The two rules the app is organized around — exact location/contact info never leave the server until a specific request is accepted, and only the account that owns a listing can act on it — are both enforced server-side, not bolted onto the UI. All of it manually tested through the running app as multiple real accounts, not just reviewed by reading the code.
+**What got built:** the four core flows, end to end, against a real SQLite-compatible backend (libSQL, a local file in dev and Turso in production) that deploys on a host that costs nothing, sitting behind real `@uconn.edu` authentication, with real email delivery (Resend) for sign-in links and for request/accept notifications. The two rules the app is organized around, exact location and contact info never leaving the server until a specific request is accepted, and only the account that owns a listing being able to act on it, are both enforced server-side rather than bolted onto the UI. All of it manually tested through the running app as multiple real accounts, not just reviewed by reading the code.
 
-**Live, with one known gap.** The app is deployed and sending real email: the sending domain (`huskybook.hmbirmingham.me`, Phase 13) is verified in Resend, and magic-link/notification mail is actually arriving — but landing in spam rather than the inbox, confirmed by the user directly rather than assumed. Since the domain itself checks out, this is a content/reputation problem (missing DMARC alignment, no plain-text part alongside the HTML body, or a cold-reputation new subdomain), not a repeat of Phase 13's DNS gap — tracked as its own follow-up rather than folded into Sprint 2, which is scoped to tests only.
+**Stubbed or deliberately deferred, and still so at the end:**
 
-**Stubbed or deliberately deferred:**
-
-- **Booking/scheduling.** Providers can't yet define availability, and there's no calendar/appointment concept beyond a request's status.
-- **Payment connectors.** No Venmo/Cash App linking yet, and no deposit terms on a listing. Scoped deliberately narrow when it lands: a link/handle a provider adds and a requester follows to pay *outside* the app — HuskyBook itself never touches or processes money.
-- **Social handles.** Providers can't yet attach Instagram/TikTok/etc. to a listing.
+- **Booking/scheduling.** No way for a provider to define availability, and no calendar or appointment concept beyond a request's status.
+- **Payment connectors.** No Venmo or Cash App linking, and no deposit terms on a listing. The intended scope was deliberately narrow: a link or handle a provider adds and a requester follows to pay *outside* the app. HuskyBook itself never touches or processes money.
+- **Social handles.** No way to attach Instagram, TikTok, or anything similar to a listing.
 - **Location features beyond the free-text building/zone field.** No structured campus building picker, no live "on my way"/"arrived" status for mobile bookings.
-- **Pagination on the directory.** Fine at seed-data scale; would need it before any real traffic.
-- **Rate limiting / abuse prevention beyond the login-link cooldown.** Nothing stops a signed-in account from spamming requests at a provider or creating many listings.
-- **Tests, partially addressed (Sprint 2 / Phase 14, extended Phase 16).** The privacy-gating SQL, ownership checks, and the edit/delete/withdraw routes now have automated HTTP-level coverage (`server/test/`, `npm run test`). Still no coverage for the client (React), and no CI wiring to run the suite automatically on push — both still manual/deferred.
-- **Account recovery / email re-verification.** Sign-in only proves "clicked a link sent to this address" once — no re-confirmation later, no way to recover if a `@uconn.edu` account is ever compromised or the email changes.
-- **Feedback channel.** No in-app way for a beta user to report a problem yet.
+- **Pagination on the directory.** Fine at seed-data scale, would have needed it before any real traffic.
+- **Rate limiting and abuse prevention beyond the login-link cooldown.** Nothing stops a signed-in account from spamming requests at a provider or creating many listings.
+- **Tests, partially addressed (Phase 14, extended in Phase 16).** The privacy-gating SQL, the ownership checks, and the edit/delete/withdraw routes all have automated HTTP-level coverage (`server/test/`, `npm run test`). No coverage for the client (React), and no CI wiring to run the suite on push.
+- **Account recovery and email re-verification.** Sign-in only ever proved "clicked a link sent to this address" once. No re-confirmation later, and no way to recover if a `@uconn.edu` account is compromised or the address changes.
+- **In-app feedback channel.** Never built. The `feedback@huskybook.hmbirmingham.me` forwarding alias from Phase 15 covered it informally instead.
 
-**What I'd do differently with more time:**
+**What I'd do differently:**
 
-- What Phase 6's log entry already said before it happened: build the auth seam *before* the four flows, not alongside them. Having lived through the retrofit now, the actual cost was mostly in Manage Requests, which had grown real complexity (the stale-listing-id recovery flow) specifically to compensate for not having real ownership yet — complexity that turned out to be temporary scaffolding, not permanent product logic. Real auth first would have skipped building that scaffolding at all.
-- Write the SQL privacy-gating logic (the `CASE WHEN status = 'accepted'` pattern in `requests.js`) and the ownership checks in `providers.js`/`requests.js` as a small set of automated tests, rather than relying on repeated manual curl/browser checks through every phase. Both have held up every time by hand, but that's a fragile guarantee for the two rules this entire app exists to enforce.
-- Decide the category taxonomy (`hair | nails | makeup | braids | other`) with more research into what UConn students actually offer, rather than picking a reasonable-looking list. `other` doing a lot of quiet work in the current enum is a sign it's probably incomplete.
-- Sprint 1's plan specified a `start` script but not a `build` step, which would have shipped an API with no way to reach the actual app. Worth remembering generally: a deployment plan that hasn't been run once, even locally in production mode, can look complete while skipping the one step that makes the other nine matter. Caught it here by actually building the client and running the full server locally before calling the branch done, rather than trusting the plan's checklist at face value.
+- What Phase 6's entry already said before it happened: build the auth seam *before* the four flows, not alongside them. Having lived through the retrofit, the actual cost was mostly in Manage Requests, which had grown real complexity (the stale-listing-id recovery flow) specifically to compensate for not having real ownership yet, complexity that turned out to be temporary scaffolding rather than permanent product logic. Real auth first would have skipped building that scaffolding at all.
+- Write the SQL privacy-gating logic (the `CASE WHEN status = 'accepted'` pattern in `requests.js`) and the ownership checks in `providers.js`/`requests.js` as a small set of automated tests, rather than relying on repeated manual curl/browser checks through every phase. Both held up every time by hand, but that's a fragile guarantee for the two rules this entire app exists to enforce.
+- Decide the category taxonomy (`hair | nails | makeup | braids | other`) with more research into what UConn students actually offer, rather than picking a reasonable-looking list. `other` doing a lot of quiet work in the enum is a sign it was probably incomplete.
+- My Sprint 1 plan specified a `start` script but not a `build` step, which would have shipped an API with no way to reach the actual app. Worth remembering generally: a deployment plan that hasn't been run once, even locally in production mode, can look complete while skipping the one step that makes the other nine matter. Caught it by actually building the client and running the full server locally before calling the branch done, rather than trusting a checklist at face value.
+
+---
+
 ## Phase 15 — Diagnosing spam-foldering (`fix/mailer-deliverability`)
 
 **What happened:** the follow-up flagged after Phase 14 — real mail is delivering (Resend shows the sending domain fully verified) but landing in spam, not the inbox. Diagnosed by actually checking DNS, not guessing from the code.
