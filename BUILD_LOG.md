@@ -310,3 +310,22 @@ Partway through this build (2026-09-16) I set myself a sprint plan targeting a N
 **Test coverage added this phase (`server/test/edit-delete-withdraw.test.js`, 15 tests, same real-HTTP pattern Phase 14 established):** owner-can/non-owner-cannot for all three routes; partial edit only changes the fields sent; invalid category and empty-body edits are rejected; deleting a listing cascades to its requests and drops it from the public directory; withdraw succeeds only while pending and 409s once accepted; all three routes 401 with no session; all three 404 against a nonexistent id. The routes existed and worked, manually verified when they shipped, but had no regression coverage, unlike everything Phase 14 covers.
 
 **Not done in this phase:** no client (React) test coverage, the same scope boundary Phase 14 drew.
+
+---
+
+## Phase 17: Archive (`feat/archive-cleanup`)
+
+**What I'm doing:** closing this out as a finished artifact rather than leaving it to rot as a half-live app. The Render service is suspended, the repo is archived, and the docs say so at the top instead of reading like something still taking users.
+
+**Decision: stop rather than keep building.** HuskyBook works, and both rules it exists to enforce hold up under test. It also solves a problem neither side actually has. Unlicensed student providers already book through Instagram and group chats, at no cost and with an audience they have already built; licensed businesses already use real booking tools. A directory between the two adds a step for everybody and removes one for nobody. Charging a fee would have made that worse rather than better, since it would have routed money for unlicensed services through a platform I run, a liability worth carrying only for something people are asking for. The README's "Why I stopped" is the short version.
+
+**Decision: suspend the deployment rather than delete it.** Suspending keeps the Blueprint and the Turso database intact in case this is ever worth standing back up, at the cost of there being no clickable demo. The README's screenshots cover that instead, captured against a real seeded run rather than mocked up.
+
+**What I cleaned up:**
+- Rewrote this log in one consistent first-person voice, and removed em dashes across the whole repo, including user-facing copy.
+- Removed `railway.toml` and its README mention. Render had been the only maintained path since Phase 11, and carrying a second config implied a choice that was not real.
+- Dropped a pointer in `.env.example` to a working-notes directory that was never part of the repo.
+- Fixed two copy bugs the screenshots surfaced: the request modal rendered the requester's name sentence-final, so a name ending in a period displayed a double stop, and the unavailable badge still read "Not taking cuts" from when the directory was hair only.
+- Gave the three mobile seed listings a real `exact_location` string instead of a bare dash, since that value is shown to a requester once a request is accepted.
+
+**What I'd do differently:** decide what the thing is for before building it. Every technical decision in this log holds up, and the two rules the app is organized around are enforced server-side and covered by tests. None of that was ever the risk. The risk was that the need itself was assumed rather than checked, and an afternoon spent asking a few providers how they currently take bookings would have surfaced that before any of this existed.
